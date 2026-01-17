@@ -116,10 +116,10 @@ export default function AttendanceHistoryPage({
   }
 
   const today = new Date();
-  const sixMonthsAgo = subMonths(today, 6);
+  const startDate = new Date(2026, 0, 1); // January 1, 2026
 
   const days = eachDayOfInterval({
-    start: sixMonthsAgo,
+    start: startDate,
     end: today,
   });
   const sundays = days.filter((day) => isWeekend(day) && day.getDay() === 0);
@@ -138,7 +138,7 @@ export default function AttendanceHistoryPage({
 
   const totalAttendances = attendances.filter((attendance) => {
     const attendanceDate = new Date(attendance.date);
-    return attendanceDate >= sixMonthsAgo && attendanceDate <= today;
+    return attendanceDate >= startDate && attendanceDate <= today;
   }).length;
 
   return (
@@ -149,7 +149,7 @@ export default function AttendanceHistoryPage({
             {congregation.name}
           </h1>
           <p className="text-gray-500 text-xs sm:text-sm">
-            {totalAttendances} kehadiran dari {sundays.length} minggu terakhir (
+            {totalAttendances} kehadiran dari {sundays.length} minggu sejak Januari 2026 (
             {Math.round((totalAttendances / sundays.length) * 100)}%)
           </p>
         </div>

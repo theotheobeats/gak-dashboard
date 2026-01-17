@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, Plus, Edit, Trash2, User, Phone, MapPin, Calendar, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, Edit, Trash2, User, Phone, MapPin, Calendar, X, ChevronLeft, ChevronRight, History } from "lucide-react";
 import toast from "react-hot-toast";
+import Link from "next/link";
 
 interface Congregation {
   id: string;
@@ -315,6 +316,13 @@ export default function CongregationsPage() {
                       </td>
                       <td className="py-3 px-3">
                         <div className="flex items-center justify-end gap-1">
+                          <Link
+                            href={`/attendance/${congregation.id}`}
+                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-primary"
+                            title="Riwayat Kehadiran"
+                          >
+                            <History size={16} />
+                          </Link>
                           <button
                             onClick={() => handleEdit(congregation)}
                             className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-gray-900"

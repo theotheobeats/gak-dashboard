@@ -1,11 +1,75 @@
 "use client";
 
 import { StatCard } from "@/components/dashboard/StatCard";
-import { Users, Calendar, CheckSquare } from "lucide-react";
+import { Users, Calendar, CheckSquare, Loader2 } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
+import { useEffect, useState } from "react";
 
 export default function DashboardPage() {
   const { data: session } = useSession();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalCongregations: 0,
+    activeCongregations: 0,
+    todayAttendance: 0,
+    recentActivities: [] as Array<{ id: string; type: string; message: string; time: string }>,
+  });
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const [congregationsRes, attendancesRes] = await Promise.all([
+          fetch("/api/congregations?pageSize=1000"),
+          fetch("/api/attendances/sunday"),
+        ]);
+
+        const congregationsData = await congregationsRes.json();
+        const attendancesData = await attendancesRes.json();
+
+        const totalCongregations = congregationsData.total || 0;
+        const activeCongregations = congregationsData.data?.filter((c: { status: string }) => c.status === "active").length || 0;
+        const todayAttendance = attendancesData.data?.length || 0;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const allAttendancesRes = await fetch("/api/attendances");
+        const allAttendancesData = await allAttendancesRes.json();
+
+        const recentActivities = allAttendancesData.data
+          ?.slice(0, 5)
+          .map((a: { id: string; date: string; congregation: { name: string }; sermonSession: { name: string } }) => ({
+            id: a.id,
+            type: "attendance",
+            message: `${a.congregation.name} hadir di ${a.sermonSession.name}`,
+            time: new Date(a.date).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
+          })) || [];
+
+        setStats({
+          totalCongregations,
+          activeCongregations,
+          todayAttendance,
+          recentActivities,
+        });
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -23,28 +87,28 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
         <StatCard
           title="Total Jemaat"
-          value="0"
+          value={stats.totalCongregations.toString()}
           trend="up"
-          trendLabel="Anggota aktif"
+          trendLabel="Anggota terdaftar"
           variant="primary"
         />
         <StatCard
           title="Anggota Aktif"
-          value="0"
+          value={stats.activeCongregations.toString()}
           trend="up"
-          trendLabel="Saat ini aktif"
+          trendLabel="Status aktif"
         />
         <StatCard
           title="Kehadiran Hari Ini"
-          value="0"
+          value={stats.todayAttendance.toString()}
           trend="up"
           trendLabel="Terdata hari ini"
         />
         <StatCard
-          title="Tugas Tertunda"
-          value="0"
+          title="Kehadiran Minggu Ini"
+          value={stats.todayAttendance.toString()}
           trend="up"
-          trendLabel="Perlu perhatian"
+          trendLabel="Total kehadiran"
         />
 
         <div className="xl:col-span-2 min-h-[300px] bg-white rounded-3xl p-3 sm:p-4 shadow-sm border border-gray-100">
@@ -63,7 +127,7 @@ export default function DashboardPage() {
               </div>
             </a>
             <a
-              href="/congregations"
+              href="/attendance/create"
               className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
             >
               <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -75,26 +139,26 @@ export default function DashboardPage() {
               </div>
             </a>
             <a
-              href="/congregations"
+              href="/attendance"
               className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
             >
               <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Calendar className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <h4 className="font-medium text-gray-900 text-sm">Lihat Jadwal</h4>
-                <p className="text-xs text-gray-500">Acara yang akan datang</p>
+                <h4 className="font-medium text-gray-900 text-sm">Riwayat Absensi</h4>
+                <p className="text-xs text-gray-500">Lihat data kehadiran</p>
               </div>
             </a>
             <a
-              href="/congregations"
+              href="/attendance"
               className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
             >
               <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Users className="w-5 h-5 text-purple-600" />
               </div>
               <div>
-                <h4 className="font-medium text-gray-900 text-sm">Lihat Laporan</h4>
+                <h4 className="font-medium text-gray-900 text-sm">Laporan Kehadiran</h4>
                 <p className="text-xs text-gray-500">Analisis dan wawasan</p>
               </div>
             </a>
@@ -104,20 +168,21 @@ export default function DashboardPage() {
         <div className="xl:col-span-2 min-h-[300px] bg-white rounded-3xl p-3 sm:p-4 shadow-sm border border-gray-100">
           <h3 className="text-base font-semibold text-gray-900 mb-3">Aktivitas Terbaru</h3>
           <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="w-1.5 h-1.5 bg-primary rounded-full mt-1.5 flex-shrink-0"></div>
-              <div>
-                <p className="text-xs text-gray-900">Selamat datang di Dashboard GAK</p>
-                <p className="text-[10px] text-gray-500">Mulai dengan menambahkan anggota jemaat pertama Anda</p>
+            {stats.recentActivities.length > 0 ? (
+              stats.recentActivities.map((activity) => (
+                <div key={activity.id} className="flex items-start gap-3">
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full mt-1.5 flex-shrink-0"></div>
+                  <div>
+                    <p className="text-xs text-gray-900">{activity.message}</p>
+                    <p className="text-[10px] text-gray-500">{activity.time}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-xs text-gray-500">Belum ada aktivitas terbaru</p>
               </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-1.5 h-1.5 bg-gray-300 rounded-full mt-1.5 flex-shrink-0"></div>
-              <div>
-                <p className="text-xs text-gray-900">Sistem diinisialisasi</p>
-                <p className="text-[10px] text-gray-500">Semua sistem berjalan dengan lancar</p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>
