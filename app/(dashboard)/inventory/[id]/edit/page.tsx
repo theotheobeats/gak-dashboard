@@ -62,6 +62,11 @@ export default function EditInventoryPage({
     cost: 0,
     quantity: 1,
   });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; maintenanceId: string | null; maintenanceName: string }>({
+    show: false,
+    maintenanceId: null,
+    maintenanceName: "",
+  });
 
   const fetchInventory = useCallback(async () => {
     try {
@@ -143,16 +148,21 @@ export default function EditInventoryPage({
     }
   };
 
-  const handleDeleteMaintenance = async (maintenanceId: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus catatan perawatan ini?")) return;
+  const handleDeleteMaintenance = async (maintenanceId: string, maintenanceName: string) => {
+    setDeleteConfirm({ show: true, maintenanceId, maintenanceName });
+  };
+
+  const confirmDeleteMaintenance = async () => {
+    if (!deleteConfirm.maintenanceId) return;
 
     try {
-      const response = await fetch(`/api/inventories/${inventory?.id}/maintenances/${maintenanceId}`, {
+      const response = await fetch(`/api/inventories/${inventory?.id}/maintenances/${deleteConfirm.maintenanceId}`, {
         method: "DELETE",
       });
 
       if (!response.ok) throw new Error("Failed to delete maintenance");
       toast.success("Perawatan berhasil dihapus");
+      setDeleteConfirm({ show: false, maintenanceId: null, maintenanceName: "" });
       fetchInventory();
     } catch (error) {
       console.error("Error deleting maintenance:", error);
@@ -213,14 +223,15 @@ export default function EditInventoryPage({
   }
 
   return (
-    <div className="p-4 lg:p-6">
+    <div className="p-3 sm:p-4">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-4 mb-4">
           <button
             onClick={() => router.push("/inventory")}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="Kembali ke daftar inventaris"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5 text-gray-900" />
           </button>
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Edit Inventaris</h1>
@@ -228,26 +239,28 @@ export default function EditInventoryPage({
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-4">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Informasi Dasar</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nama</label>
+                <label htmlFor="inventory-name" className="block text-sm font-medium text-gray-700 mb-1">Nama</label>
                 <input
+                  id="inventory-name"
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm text-gray-900 placeholder-gray-400"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+                  <label htmlFor="inventory-category" className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
                   <select
+                    id="inventory-category"
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm text-gray-900"
                   >
                     <option value="SOUNDSYSTEM">Sound System</option>
                     <option value="MULTIMEDIA">Multimedia</option>
@@ -255,11 +268,12 @@ export default function EditInventoryPage({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <label htmlFor="inventory-status" className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                   <select
+                    id="inventory-status"
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm text-gray-900"
                   >
                     <option value="GOOD">Baik</option>
                     <option value="DAMAGED">Rusak</option>
@@ -270,27 +284,30 @@ export default function EditInventoryPage({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Jumlah</label>
+                  <label htmlFor="inventory-quantity" className="block text-sm font-medium text-gray-700 mb-1">Jumlah</label>
                   <input
+                    id="inventory-quantity"
                     type="number"
                     value={formData.quantity}
                     onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm text-gray-900 placeholder-gray-400"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Harga</label>
+                  <label htmlFor="inventory-price" className="block text-sm font-medium text-gray-700 mb-1">Harga</label>
                   <input
+                    id="inventory-price"
                     type="number"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) || 0 })}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm text-gray-900 placeholder-gray-400"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal Pembelian</label>
+                <label htmlFor="inventory-purchase-date" className="block text-sm font-medium text-gray-700 mb-1">Tanggal Pembelian</label>
                 <input
+                  id="inventory-purchase-date"
                   type="date"
                   value={formData.purchaseDate}
                   onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
@@ -302,24 +319,24 @@ export default function EditInventoryPage({
                 disabled={saving}
                 className="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 text-sm font-medium disabled:opacity-50"
               >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 text-white" />}
                 Simpan Perubahan
               </button>
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-4">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <Wrench className="w-5 h-5" />
+                  <Wrench className="w-5 h-5 text-gray-900" />
                   Riwayat Perawatan
                 </h2>
                 <button
                   onClick={() => setShowMaintenanceForm(!showMaintenanceForm)}
                   className="px-3 py-1.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-1 text-sm"
                 >
-                  <Plus size={16} />
+                  <Plus size={16} className="text-white" />
                   Tambah
                 </button>
               </div>
@@ -327,54 +344,59 @@ export default function EditInventoryPage({
               {showMaintenanceForm && (
                 <div className="mb-4 p-4 bg-gray-50 rounded-xl space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nama Perawatan</label>
+                    <label htmlFor="maintenance-name" className="block text-sm font-medium text-gray-700 mb-1">Nama Perawatan</label>
                     <input
+                      id="maintenance-name"
                       type="text"
                       value={maintenanceForm.name}
                       onChange={(e) => setMaintenanceForm({ ...maintenanceForm, name: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm text-gray-900 placeholder-gray-400"
                       placeholder="Contoh: Penggantian speaker"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+                    <label htmlFor="maintenance-description" className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
                     <textarea
+                      id="maintenance-description"
                       value={maintenanceForm.description}
                       onChange={(e) => setMaintenanceForm({ ...maintenanceForm, description: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm resize-none"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm resize-none text-gray-900 placeholder-gray-400"
                       rows={2}
                       placeholder="Detail perawatan..."
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                      <label htmlFor="maintenance-status" className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                       <select
+                        id="maintenance-status"
                         value={maintenanceForm.status}
                         onChange={(e) => setMaintenanceForm({ ...maintenanceForm, status: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm text-gray-900"
                       >
                         <option value="ONGOING">Sedang Berjalan</option>
                         <option value="COMPLETED">Selesai</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Biaya</label>
+                      <label htmlFor="maintenance-cost" className="block text-sm font-medium text-gray-700 mb-1">Biaya</label>
                       <input
+                        id="maintenance-cost"
                         type="number"
                         value={maintenanceForm.cost}
                         onChange={(e) => setMaintenanceForm({ ...maintenanceForm, cost: parseInt(e.target.value) || 0 })}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm text-gray-900 placeholder-gray-400"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Jumlah</label>
+                    <label htmlFor="maintenance-quantity" className="block text-sm font-medium text-gray-700 mb-1">Jumlah</label>
                     <input
+                      id="maintenance-quantity"
                       type="number"
                       value={maintenanceForm.quantity}
                       onChange={(e) => setMaintenanceForm({ ...maintenanceForm, quantity: parseInt(e.target.value) || 1 })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm text-gray-900 placeholder-gray-400"
                     />
                   </div>
                   <div className="flex gap-2">
@@ -413,10 +435,11 @@ export default function EditInventoryPage({
                           )}
                         </div>
                         <button
-                          onClick={() => handleDeleteMaintenance(maintenance.id)}
-                          className="p-1 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          onClick={() => handleDeleteMaintenance(maintenance.id, maintenance.name)}
+                          className="p-2 text-red-500 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-200"
+                          aria-label={`Hapus perawatan ${maintenance.name}`}
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
@@ -433,9 +456,9 @@ export default function EditInventoryPage({
               )}
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 sm:p-4">
               <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2 mb-4">
-                <ClipboardCheck className="w-5 h-5" />
+                <ClipboardCheck className="w-5 h-5 text-gray-900" />
                 Riwayat Inspeksi
               </h2>
 
@@ -464,6 +487,38 @@ export default function EditInventoryPage({
           </div>
         </div>
       </div>
+
+      {deleteConfirm.show && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-confirm-title"
+        >
+          <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl">
+            <h2 id="delete-confirm-title" className="text-lg font-bold text-gray-900 mb-2">
+              Hapus Perawatan
+            </h2>
+            <p className="text-sm text-gray-600 mb-6">
+              Apakah Anda yakin ingin menghapus catatan perawatan "{deleteConfirm.maintenanceName}"? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirm({ show: false, maintenanceId: null, maintenanceName: "" })}
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors font-medium text-sm"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmDeleteMaintenance}
+                className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors font-medium text-sm"
+              >
+                Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
