@@ -5,11 +5,12 @@ const prisma = new PrismaClient();
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const congregation = await prisma.congregation.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!congregation) {
@@ -31,14 +32,15 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { name, title, birthday, whatsappNumber, address, status } = body;
 
     const congregation = await prisma.congregation.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         name,
         title: title || null,
@@ -51,19 +53,21 @@ export async function PUT(
     });
 
     return NextResponse.json(congregation);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error updating congregation:", error);
-    if (error.code === "P2002") {
-      return NextResponse.json(
-        { error: "WhatsApp number already exists" },
-        { status: 400 }
-      );
-    }
-    if (error.code === "P2025") {
-      return NextResponse.json(
-        { error: "Congregation not found" },
-        { status: 404 }
-      );
+    if (error && typeof error === "object" && "code" in error) {
+      if (error.code === "P2002") {
+        return NextResponse.json(
+          { error: "WhatsApp number already exists" },
+          { status: 400 }
+        );
+      }
+      if (error.code === "P2025") {
+        return NextResponse.json(
+          { error: "Congregation not found" },
+          { status: 404 }
+        );
+      }
     }
     return NextResponse.json(
       { error: "Failed to update congregation" },
@@ -74,17 +78,18 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     await prisma.congregation.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: "Congregation deleted successfully" });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error deleting congregation:", error);
-    if (error.code === "P2025") {
+    if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
       return NextResponse.json(
         { error: "Congregation not found" },
         { status: 404 }

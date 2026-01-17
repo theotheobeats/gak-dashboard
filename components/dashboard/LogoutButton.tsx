@@ -24,7 +24,7 @@ export function LogoutButton() {
       <span className="text-gray-400 group-hover:text-gray-600">
         <LogOut size={20} />
       </span>
-      <span className="flex-1 text-left">Logout</span>
+      <span className="flex-1 text-left">Keluar</span>
     </button>
   );
 }

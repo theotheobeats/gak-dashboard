@@ -4,16 +4,15 @@ import { useState } from "react";
 import { signIn } from "@/lib/auth-client";
 import Link from "next/link";
 import { Hexagon, Mail, Lock, ArrowRight } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
 
     try {
@@ -21,9 +20,10 @@ export default function SignInPage() {
         email,
         password,
       });
+      toast.success("Berhasil masuk");
       window.location.href = "/";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to sign in");
+      toast.error(err instanceof Error ? err.message : "Gagal masuk");
     } finally {
       setLoading(false);
     }
@@ -33,39 +33,33 @@ export default function SignInPage() {
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <Hexagon className="w-10 h-10 text-primary fill-primary/20" />
-          <span className="text-2xl font-bold text-gray-900">GAK</span>
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <Hexagon className="w-8 h-8 text-primary fill-primary/20" />
+          <span className="text-xl font-bold text-gray-900">GAK</span>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Welcome back
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">
+              Selamat Datang Kembali
             </h1>
-            <p className="text-gray-500">
-              Sign in to your account to continue
+            <p className="text-gray-500 text-sm">
+              Masuk ke akun Anda untuk melanjutkan
             </p>
           </div>
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="rounded-2xl bg-red-50 p-4 text-sm text-red-700 border border-red-100">
-                {error}
-              </div>
-            )}
-
-            <div className="space-y-4">
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <div className="space-y-3">
               <div>
                 <label
                   htmlFor="email"
-                  className="block text-sm font-medium text-gray-700 mb-2"
+                  className="block text-xs font-medium text-gray-700 mb-1.5"
                 >
-                  Email address
+                  Alamat Email
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                   <input
                     id="email"
                     name="email"
@@ -74,8 +68,8 @@ export default function SignInPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    placeholder="you@example.com"
+                    className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 text-gray-900 placeholder-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
+                    placeholder="anda@contoh.com"
                   />
                 </div>
               </div>
@@ -83,12 +77,12 @@ export default function SignInPage() {
               <div>
                 <label
                   htmlFor="password"
-                  className="block text-sm font-medium text-gray-700 mb-2"
+                  className="block text-xs font-medium text-gray-700 mb-1.5"
                 >
-                  Password
+                  Kata Sandi
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                   <input
                     id="password"
                     name="password"
@@ -97,8 +91,8 @@ export default function SignInPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    placeholder="••••••••"
+                    className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 text-gray-900 placeholder-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
+                    placeholder="•••••••••"
                   />
                 </div>
               </div>
@@ -107,25 +101,25 @@ export default function SignInPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-5 py-3 bg-primary hover:bg-primary-dark text-white rounded-xl font-medium transition-colors shadow-lg hover:shadow-primary/20 flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full px-4 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors shadow-lg hover:shadow-primary/20 flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50 text-sm"
             >
-              {loading ? "Signing in..." : (
+              {loading ? "Masuk..." : (
                 <>
-                  Sign in
-                  <ArrowRight size={20} />
+                  Masuk
+                  <ArrowRight size={18} />
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-500">
-              Don't have an account?{" "}
+          <div className="mt-4 text-center">
+            <p className="text-gray-500 text-sm">
+              Belum punya akun?{" "}
               <Link
                 href="/sign-up"
                 className="font-medium text-primary hover:text-primary-dark"
               >
-                Sign up
+                Daftar
               </Link>
             </p>
           </div>

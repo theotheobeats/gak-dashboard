@@ -8,8 +8,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const search = searchParams.get("search");
+    const page = parseInt(searchParams.get("page") || "1");
+    const pageSize = parseInt(searchParams.get("pageSize") || "10");
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
 
     if (status && status !== "all") {
       where.status = status;
@@ -23,12 +25,23 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const congregations = await prisma.congregation.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-    });
+    const [congregations, total] = await Promise.all([
+      prisma.congregation.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.congregation.count({ where }),
+    ]);
 
-    return NextResponse.json(congregations);
+    return NextResponse.json({
+      data: congregations,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    });
   } catch (error) {
     console.error("Error fetching congregations:", error);
     return NextResponse.json(
@@ -63,9 +76,9 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(congregation, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating congregation:", error);
-    if (error.code === "P2002") {
+    if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
       return NextResponse.json(
         { error: "WhatsApp number already exists" },
         { status: 400 }

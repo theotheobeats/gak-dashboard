@@ -4,7 +4,7 @@ import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
-import { Menu, X } from "lucide-react";
+import { Menu } from "lucide-react";
 
 export default function DashboardLayout({
   children,
@@ -41,7 +41,7 @@ export default function DashboardLayout({
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-100 flex flex-col h-screen shadow-sm lg:shadow-none transform transition-transform duration-300 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-100 flex flex-col h-screen shadow-sm transform transition-transform duration-300 ease-in-out ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
@@ -49,7 +49,7 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden lg:ml-64">
         {/* Mobile header */}
         <div className="lg:hidden flex items-center justify-between p-4 border-b border-gray-100 bg-white">
           <button
@@ -63,9 +63,17 @@ export default function DashboardLayout({
         </div>
 
         {/* Content area */}
-        <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 pt-2 mt-4 sm:mt-8">
+        <div className="flex-1 overflow-auto p-3 sm:p-4 lg:p-6 pt-2 mt-2 sm:mt-2">
           {children}
         </div>
+
+        {/* Footer */}
+        <footer className="border-t border-gray-100 bg-white py-3 px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-500">
+            <p>© {new Date().getFullYear()} Gereja Anugerah Kristus. All rights reserved.</p>
+            <p>Developed by TITU LABS</p>
+          </div>
+        </footer>
       </main>
     </div>
   );
