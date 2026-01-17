@@ -1,9 +1,10 @@
 "use client";
 
 import { StatCard } from "@/components/dashboard/StatCard";
-import { Users, Calendar, CheckSquare, Loader2 } from "lucide-react";
+import { Users, Calendar, CheckSquare, Loader2, ImageIcon } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 export default function DashboardPage() {
   const { data: session } = useSession();
@@ -126,7 +127,7 @@ export default function DashboardPage() {
                 <p className="text-xs text-gray-500">Lihat dan edit anggota</p>
               </div>
             </a>
-            <a
+            <Link
               href="/attendance/create"
               className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
             >
@@ -137,8 +138,8 @@ export default function DashboardPage() {
                 <h4 className="font-medium text-gray-900 text-sm">Catat Kehadiran</h4>
                 <p className="text-xs text-gray-500">Lacak kehadiran anggota</p>
               </div>
-            </a>
-            <a
+            </Link>
+            <Link
               href="/attendance"
               className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
             >
@@ -149,17 +150,17 @@ export default function DashboardPage() {
                 <h4 className="font-medium text-gray-900 text-sm">Riwayat Absensi</h4>
                 <p className="text-xs text-gray-500">Lihat data kehadiran</p>
               </div>
-            </a>
+            </Link>
             <a
-              href="/attendance"
+              href="/media"
               className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
             >
               <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Users className="w-5 h-5 text-purple-600" />
+                <ImageIcon className="w-5 h-5 text-purple-600" />
               </div>
               <div>
-                <h4 className="font-medium text-gray-900 text-sm">Laporan Kehadiran</h4>
-                <p className="text-xs text-gray-500">Analisis dan wawasan</p>
+                <h4 className="font-medium text-gray-900 text-sm">Galeri Media</h4>
+                <p className="text-xs text-gray-500">Kelola foto dan album</p>
               </div>
             </a>
           </div>

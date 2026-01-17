@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import toast from "react-hot-toast";
-import { format, subMonths, eachDayOfInterval, isSameDay, isWeekend } from "date-fns";
+import { format, eachDayOfInterval, isSameDay, isWeekend } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 
 interface Attendance {

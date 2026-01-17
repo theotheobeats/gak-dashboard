@@ -6,6 +6,8 @@ import {
     Calendar,
     Settings,
     Hexagon,
+    Package,
+    ImageIcon,
 } from "lucide-react";
 import { LogoutButton } from "./LogoutButton";
 
@@ -44,6 +46,18 @@ export function Sidebar() {
                             icon={<Calendar size={18} />}
                             label="Kehadiran"
                             active={pathname === "/attendance"}
+                        />
+                        <NavItem
+                            href="/inventory"
+                            icon={<Package size={18} />}
+                            label="Inventaris"
+                            active={pathname === "/inventory"}
+                        />
+                        <NavItem
+                            href="/media"
+                            icon={<ImageIcon size={18} />}
+                            label="Media"
+                            active={pathname === "/media"}
                         />
                     </nav>
                 </div>

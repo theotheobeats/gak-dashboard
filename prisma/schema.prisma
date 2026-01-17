@@ -109,7 +109,7 @@ model ReflectionTag {
 }
 
 model Album {
-  id           String   @id
+  id           String   @id @default(uuid())
   name         String
   description  String?
   date         DateTime
@@ -123,7 +123,7 @@ model Album {
 }
 
 model Image {
-  id         String       @id
+  id         String       @id @default(uuid())
   url        String
   alt        String?
   caption    String?
@@ -199,17 +199,17 @@ model Attendance {
 }
 
 model Inventory {
-  id                   String                 @id @default(uuid())
-  name                 String
-  quantity             Int
-  category             InventoryCategory
-  status               InventoryStatus
-  price                Int
-  purchaseDate         DateTime
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
-  InventoryInspection  InventoryInspection[]
-  InventoryMaintenance InventoryMaintenance[]
+  id           String                 @id @default(uuid())
+  name         String
+  quantity     Int
+  category     InventoryCategory
+  status       InventoryStatus
+  price        Int
+  purchaseDate DateTime
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  inspections  InventoryInspection[]
+  maintenances InventoryMaintenance[]
 
   @@map("inventories")
 }

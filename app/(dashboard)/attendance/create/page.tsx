@@ -206,7 +206,7 @@ export default function CreateAttendancePage() {
                         className="w-full px-4 py-3 bg-primary/10 text-primary rounded-lg text-sm font-medium hover:bg-primary/20 flex items-center justify-center gap-2"
                       >
                         <Plus size={16} />
-                        <span>Tambah "{searchQuery}" sebagai jemaat baru</span>
+                        <span>Tambah &quot;{searchQuery}&quot; sebagai jemaat baru</span>
                       </button>
                     </div>
                   ) : (
