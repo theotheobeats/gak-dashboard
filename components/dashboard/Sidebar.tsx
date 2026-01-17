@@ -58,6 +58,7 @@ export function Sidebar() {
                             icon={<ImageIcon size={18} />}
                             label="Media"
                             active={pathname === "/media"}
+                            disabled
                         />
                     </nav>
                 </div>
@@ -102,10 +103,24 @@ interface NavItemProps {
     icon: React.ReactNode;
     label: string;
     active?: boolean;
+    disabled?: boolean;
     className?: string;
 }
 
-function NavItem({ href, icon, label, active, className }: NavItemProps) {
+function NavItem({ href, icon, label, active, disabled, className }: NavItemProps) {
+    if (disabled) {
+        return (
+            <div
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-400 cursor-not-allowed ${className || ""}`}
+            >
+                <span className="text-gray-400">
+                    {icon}
+                </span>
+                <span className="flex-1">{label}</span>
+            </div>
+        );
+    }
+
     return (
         <Link
             href={href}
