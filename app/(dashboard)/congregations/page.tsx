@@ -144,13 +144,13 @@ export default function CongregationsPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+    <div className="space-y-6 sm:space-y-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+        <div className="flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
             Congregation Management
           </h1>
-          <p className="text-gray-500">
+          <p className="text-gray-500 text-sm sm:text-base">
             Manage your congregation members and their information
           </p>
         </div>
@@ -167,14 +167,15 @@ export default function CongregationsPage() {
             });
             setShowModal(true);
           }}
-          className="px-5 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl font-medium transition-colors shadow-lg hover:shadow-primary/20 flex items-center gap-2"
+          className="px-4 sm:px-5 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl font-medium transition-colors shadow-lg hover:shadow-primary/20 flex items-center gap-2 w-full sm:w-auto justify-center"
         >
           <Plus size={20} />
-          Add Congregation
+          <span className="hidden sm:inline">Add Congregation</span>
+          <span className="sm:hidden">Add</span>
         </button>
       </div>
 
-      <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+      <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div className="flex-1 relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -189,7 +190,7 @@ export default function CongregationsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-3 rounded-xl border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="px-4 py-3 rounded-xl border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 w-full sm:w-auto"
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -209,8 +210,8 @@ export default function CongregationsPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <table className="w-full min-w-[600px]">
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-4 px-4 font-semibold text-gray-700">
@@ -325,7 +326,7 @@ export default function CongregationsPage() {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl">
+          <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-gray-900">
                 {editingCongregation ? "Edit Congregation" : "Add Congregation"}

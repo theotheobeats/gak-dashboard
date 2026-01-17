@@ -5,9 +5,9 @@ import {
     Users,
     Calendar,
     Settings,
-    LogOut,
     Hexagon,
 } from "lucide-react";
+import { LogoutButton } from "./LogoutButton";
 
 export function Sidebar() {
     const pathname = usePathname();
@@ -59,12 +59,7 @@ export function Sidebar() {
                             label="Settings"
                             active={pathname === "/settings"}
                         />
-                        <NavItem
-                            href="/sign-out"
-                            icon={<LogOut size={20} />}
-                            label="Logout"
-                            className="mt-4"
-                        />
+                        <LogoutButton />
                     </nav>
                 </div>
             </div>

@@ -5,17 +5,17 @@ import { Users, Calendar, CheckSquare } from "lucide-react";
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-          <p className="text-gray-500">
+    <div className="space-y-6 sm:space-y-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+        <div className="flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+          <p className="text-gray-500 text-sm sm:text-base">
             Welcome to GAK Dashboard. Manage your congregation and activities.
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
         <StatCard
           title="Total Congregations"
           value="0"
@@ -42,14 +42,14 @@ export default function DashboardPage() {
           trendLabel="Need attention"
         />
 
-        <div className="xl:col-span-2 min-h-[300px] bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+        <div className="xl:col-span-2 min-h-[300px] bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <a
               href="/congregations"
               className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors"
             >
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Users className="w-6 h-6 text-primary" />
               </div>
               <div>
@@ -61,7 +61,7 @@ export default function DashboardPage() {
               href="/congregations"
               className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors"
             >
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
                 <CheckSquare className="w-6 h-6 text-green-600" />
               </div>
               <div>
@@ -73,7 +73,7 @@ export default function DashboardPage() {
               href="/congregations"
               className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors"
             >
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Calendar className="w-6 h-6 text-blue-600" />
               </div>
               <div>
@@ -85,7 +85,7 @@ export default function DashboardPage() {
               href="/congregations"
               className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors"
             >
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Users className="w-6 h-6 text-purple-600" />
               </div>
               <div>
@@ -96,18 +96,18 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="xl:col-span-2 min-h-[300px] bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+        <div className="xl:col-span-2 min-h-[300px] bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
           <div className="space-y-4">
             <div className="flex items-start gap-4">
-              <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
+              <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
               <div>
                 <p className="text-sm text-gray-900">Welcome to GAK Dashboard</p>
                 <p className="text-xs text-gray-500">Get started by adding your first congregation member</p>
               </div>
             </div>
             <div className="flex items-start gap-4">
-              <div className="w-2 h-2 bg-gray-300 rounded-full mt-2"></div>
+              <div className="w-2 h-2 bg-gray-300 rounded-full mt-2 flex-shrink-0"></div>
               <div>
                 <p className="text-sm text-gray-900">System initialized</p>
                 <p className="text-xs text-gray-500">All systems are running smoothly</p>
