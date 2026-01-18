@@ -125,11 +125,15 @@ export default function CreateAttendancePage() {
     }
   };
 
-  const currentHour = new Date().getHours();
-  
+  const now = new Date();
+  const gmt7Offset = 7;
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  const gmt7Time = new Date(utc + (3600000 * gmt7Offset));
+  const currentHour = gmt7Time.getHours();
+
   let currentSession = "";
   let isValidServiceTime = false;
-  
+
   if (currentHour >= 6 && currentHour < 9) {
     currentSession = "Kebaktian Umum 1";
     isValidServiceTime = true;
