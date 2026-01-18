@@ -30,7 +30,7 @@ export default function CreateAttendancePage() {
   useEffect(() => {
     const fetchCongregations = async () => {
       try {
-        const response = await fetch("/api/congregations");
+        const response = await fetch("/api/congregations?pageSize=1000");
         const result = await response.json();
         if (result.data) {
           setCongregations(result.data);
@@ -44,9 +44,10 @@ export default function CreateAttendancePage() {
     fetchCongregations();
   }, []);
 
-  const filteredCongregations = congregations
-    .filter((c) => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    .slice(0, 5);
+  const filteredCongregations = congregations.filter((c) => {
+    const fullName = c.title ? `${c.title} ${c.name}` : c.name;
+    return fullName.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   const handleClickOutside = (event: MouseEvent) => {
     if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
