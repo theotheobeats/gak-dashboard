@@ -34,7 +34,7 @@ export async function GET(_request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { attendees } = body;
+    const { attendees, sessionName } = body;
 
     if (!attendees || !Array.isArray(attendees) || attendees.length === 0) {
       return NextResponse.json(
@@ -46,27 +46,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const now = new Date();
-    const gmt7Offset = 7;
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const gmt7Time = new Date(utc + (3600000 * gmt7Offset));
-    const currentHour = gmt7Time.getHours();
-    const currentDate = gmt7Time;
-    
-    let sessionName = "";
-    if (currentHour >= 6 && currentHour < 9) {
-      sessionName = "Session 1";
-    } else if (currentHour >= 9 && currentHour < 13) {
-      sessionName = "Session 2";
-    } else {
+    if (!sessionName) {
       return NextResponse.json(
         {
           success: false,
-          error: "Absensi hanya dapat dicatat pada jam 06:00 - 13:00 (GMT+7)",
+          error: "Session is required",
         },
         { status: 400 }
       );
     }
+
+    const now = new Date();
+    const gmt7Offset = 7;
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const currentDate = new Date(utc + (3600000 * gmt7Offset));
 
     const results = await prisma.$transaction(async (tx) => {
       const createdAttendances = [];
@@ -86,14 +79,18 @@ export async function POST(request: NextRequest) {
           finalCongregationId = newCongregation.id;
         }
 
-        const sermonSession = await tx.sermonSession.findFirst({
+        let sermonSession = await tx.sermonSession.findFirst({
           where: {
             name: sessionName,
           },
         });
 
         if (!sermonSession) {
-          throw new Error(`Session "${sessionName}" not found`);
+          sermonSession = await tx.sermonSession.create({
+            data: {
+              name: sessionName,
+            },
+          });
         }
 
         const attendance = await tx.attendance.create({

@@ -25,6 +25,7 @@ export default function CreateAttendancePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSession, setSelectedSession] = useState<string>("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -106,7 +107,7 @@ export default function CreateAttendancePage() {
       const response = await fetch("/api/attendances", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attendees }),
+        body: JSON.stringify({ attendees, sessionName: selectedSession }),
       });
 
       const result = await response.json();
@@ -125,24 +126,7 @@ export default function CreateAttendancePage() {
     }
   };
 
-  const now = new Date();
-  const gmt7Offset = 7;
-  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-  const gmt7Time = new Date(utc + (3600000 * gmt7Offset));
-  const currentHour = gmt7Time.getHours();
-
-  let currentSession = "";
-  let isValidServiceTime = false;
-
-  if (currentHour >= 6 && currentHour < 9) {
-    currentSession = "Kebaktian Umum 1";
-    isValidServiceTime = true;
-  } else if (currentHour >= 9 && currentHour < 13) {
-    currentSession = "Kebaktian Umum 2";
-    isValidServiceTime = true;
-  } else {
-    currentSession = "Di luar jam kebaktian";
-  }
+  const today = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   return (
     <div className="space-y-4">
@@ -158,12 +142,29 @@ export default function CreateAttendancePage() {
             Buat Absensi
           </h1>
           <p className="text-gray-500 text-xs sm:text-sm">
-            {currentSession} • {new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+            {selectedSession || "Pilih sesi"} • {today}
           </p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Session Selection */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <label className="block text-xs font-medium text-gray-700 mb-2">
+            Sesi Kebaktian
+          </label>
+          <select
+            value={selectedSession}
+            onChange={(e) => setSelectedSession(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm bg-white"
+          >
+            <option value="">Pilih sesi...</option>
+            <option value="Session 1">Session 1</option>
+            <option value="Session 2">Session 2</option>
+          </select>
+        </div>
+
+        {/* Congregation Selection */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
           <div className="relative" ref={dropdownRef}>
             <div
@@ -259,18 +260,12 @@ export default function CreateAttendancePage() {
           </Link>
           <button
             type="submit"
-            disabled={isSubmitting || attendees.length === 0 || !isValidServiceTime}
+            disabled={isSubmitting || attendees.length === 0 || !selectedSession}
             className="flex-1 px-4 py-3 rounded-lg bg-primary hover:bg-primary-dark text-white transition-colors font-medium shadow-lg hover:shadow-primary/20 text-sm disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSubmitting ? "Menyimpan..." : "Simpan Absensi"}
           </button>
         </div>
-
-        {!isValidServiceTime && (
-          <p className="text-xs text-orange-600 text-center">
-            Absensi hanya dapat dicatat pada jam 06:00 - 13:00 (GMT+7)
-          </p>
-        )}
       </form>
     </div>
   );
