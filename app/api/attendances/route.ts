@@ -46,8 +46,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const currentDate = new Date();
-    const currentHour = currentDate.getHours();
+    const now = new Date();
+    const gmt7Offset = 7;
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const gmt7Time = new Date(utc + (3600000 * gmt7Offset));
+    const currentHour = gmt7Time.getHours();
+    const currentDate = gmt7Time;
     
     let sessionName = "";
     if (currentHour >= 6 && currentHour < 9) {
