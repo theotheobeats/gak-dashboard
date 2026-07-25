@@ -16,6 +16,7 @@
   "vars": {
     "BETTER_AUTH_SECRET": "6MpNBQ4vBWp4M0wBSNiGi3CZSKUdZBCF",
     "BETTER_AUTH_URL": "https://dash.anugerahkristus.org",
-    "NEXT_PUBLIC_APP_URL": "https://dash.anugerahkristus.org"
+    "NEXT_PUBLIC_APP_URL": "https://dash.anugerahkristus.org",
+    "DATABASE_URL": "prisma://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqd3RfaWQiOjEsInNlY3VyZV9rZXkiOiJza19BUVJubVAwdWNiUjFUTlAxQUlXaWEiLCJhcGlfa2V5IjoiMDFLWUNITkpSOUpHVFZGOTRRMldGQzBaWlMiLCJ0ZW5hbnRfaWQiOiI3YTc2NjU4YzcwNDE2MmYzZmU5MTVmMTQ0MmJhMjNjODVlYmMxMDgyOTIwNWU3ZDJkNDI1MzJiMDg1NjViZDZlIiwiaW50ZXJuYWxfc2VjcmV0IjoiNTBjNWJjOGQtNzk3OC00NTM0LWIzNGEtNmZhMGIzZDZkZWIyIn0.4aBUWg_SIW6bE_C4tdS27XhQGfL1nzvjf_3k0e8Tz4M"
   }
 }
