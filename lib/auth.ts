@@ -2,8 +2,11 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@/lib/prisma";
 
+const appUrl = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "";
+const isSecure = appUrl.startsWith("https://");
+
 export const auth = betterAuth({
-  baseURL: process.env.BETTER_AUTH_URL || "",
+  baseURL: appUrl,
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
@@ -21,6 +24,7 @@ export const auth = betterAuth({
     },
   },
   advanced: {
-    useSecureCookies: process.env.NODE_ENV === "production",
+    useSecureCookies: isSecure,
   },
+  trustedOrigins: appUrl ? [appUrl] : [],
 });

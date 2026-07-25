@@ -19,9 +19,8 @@ export default function SignInPage() {
       await signIn.email({
         email,
         password,
+        callbackURL: "/",
       });
-      toast.success("Berhasil masuk");
-      window.location.href = "/";
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Gagal masuk");
     } finally {
