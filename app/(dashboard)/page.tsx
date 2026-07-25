@@ -17,12 +17,18 @@ export default function DashboardPage() {
   });
 
   useEffect(() => {
+    if (!session) return;
+
     const fetchDashboardData = async () => {
       try {
         const [congregationsRes, attendancesRes] = await Promise.all([
-          fetch("/api/congregations?pageSize=1000"),
-          fetch("/api/attendances/sunday"),
+          fetch("/api/congregations?pageSize=1000", { credentials: "include" }),
+          fetch("/api/attendances/sunday", { credentials: "include" }),
         ]);
+
+        if (!congregationsRes.ok || !attendancesRes.ok) {
+          throw new Error("Failed to fetch dashboard data");
+        }
 
         const congregationsData = await congregationsRes.json();
         const attendancesData = await attendancesRes.json();
@@ -31,22 +37,17 @@ export default function DashboardPage() {
         const activeCongregations = congregationsData.data?.filter((c: { status: string }) => c.status === "active").length || 0;
         const todayAttendance = attendancesData.data?.length || 0;
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        const allAttendancesRes = await fetch("/api/attendances", { credentials: "include" });
+        const allAttendancesData = allAttendancesRes.ok ? await allAttendancesRes.json() : { data: [] };
 
-        const allAttendancesRes = await fetch("/api/attendances");
-        const allAttendancesData = await allAttendancesRes.json();
-
-        const recentActivities = allAttendancesData.data
-          ?.slice(0, 5)
+        const recentActivities = (allAttendancesData.data || [])
+          .slice(0, 5)
           .map((a: { id: string; date: string; congregation: { name: string }; sermonSession: { name: string } }) => ({
             id: a.id,
             type: "attendance",
             message: `${a.congregation.name} hadir di ${a.sermonSession.name}`,
             time: new Date(a.date).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
-          })) || [];
+          }));
 
         setStats({
           totalCongregations,
@@ -62,7 +63,7 @@ export default function DashboardPage() {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [session]);
 
   if (loading) {
     return (
