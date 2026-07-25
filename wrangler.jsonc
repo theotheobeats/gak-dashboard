@@ -12,5 +12,9 @@
   },
   "compatibility_flags": [
     "nodejs_compat"
-  ]
+  ],
+  "vars": {
+    "BETTER_AUTH_URL": "https://dash.anugerahkristus.org",
+    "NEXT_PUBLIC_APP_URL": "https://dash.anugerahkristus.org"
+  }
 }
