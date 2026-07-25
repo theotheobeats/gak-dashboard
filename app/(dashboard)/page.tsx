@@ -1,20 +1,40 @@
 "use client";
 
 import { StatCard } from "@/components/dashboard/StatCard";
+import { AttendanceChart } from "@/components/dashboard/AttendanceChart";
 import { Users, Calendar, CheckSquare, Loader2, ImageIcon } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+
+interface ChartPoint {
+  label: string;
+  total: number;
+}
+
+interface AttendanceChartData {
+  year: number;
+  weekly: ChartPoint[];
+  monthly: ChartPoint[];
+}
 
 export default function DashboardPage() {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(true);
+  const [chartLoading, setChartLoading] = useState(true);
+  const [chartData, setChartData] = useState<AttendanceChartData | null>(null);
   const [stats, setStats] = useState({
     totalCongregations: 0,
     activeCongregations: 0,
     todayAttendance: 0,
     recentActivities: [] as Array<{ id: string; type: string; message: string; time: string }>,
   });
+
+  const averageWeekly = useMemo(() => {
+    if (!chartData?.weekly?.length) return "0";
+    const total = chartData.weekly.reduce((sum, w) => sum + w.total, 0);
+    return Math.round(total / chartData.weekly.length).toString();
+  }, [chartData]);
 
   useEffect(() => {
     if (!session) return;
@@ -62,7 +82,22 @@ export default function DashboardPage() {
       }
     };
 
+    const fetchChartData = async () => {
+      try {
+        const res = await fetch("/api/attendances/weekly", { credentials: "include" });
+        if (res.ok) {
+          const json = await res.json();
+          setChartData(json.data || null);
+        }
+      } catch (error) {
+        console.error("Error fetching chart data:", error);
+      } finally {
+        setChartLoading(false);
+      }
+    };
+
     fetchDashboardData();
+    fetchChartData();
   }, [session]);
 
   if (loading) {
@@ -101,10 +136,10 @@ export default function DashboardPage() {
           trendLabel="Status aktif"
         />
         <StatCard
-          title="Kehadiran Hari Ini"
-          value={stats.todayAttendance.toString()}
+          title="Rata-rata Kehadiran Mingguan"
+          value={averageWeekly}
           trend="up"
-          trendLabel="Terdata hari ini"
+          trendLabel="Per minggu"
         />
         <StatCard
           title="Kehadiran Minggu Ini"
@@ -112,8 +147,12 @@ export default function DashboardPage() {
           trend="up"
           trendLabel="Total kehadiran"
         />
+      </div>
 
-        <div className="xl:col-span-2 min-h-[300px] bg-white rounded-3xl p-3 sm:p-4 shadow-sm border border-gray-100">
+      <AttendanceChart data={chartData} loading={chartLoading} />
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+        <div className="min-h-[300px] bg-white rounded-3xl p-3 sm:p-4 shadow-sm border border-gray-100">
           <h3 className="text-base font-semibold text-gray-900 mb-3">Aksi Cepat</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <a
@@ -167,7 +206,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="xl:col-span-2 min-h-[300px] bg-white rounded-3xl p-3 sm:p-4 shadow-sm border border-gray-100">
+        <div className="min-h-[300px] bg-white rounded-3xl p-3 sm:p-4 shadow-sm border border-gray-100">
           <h3 className="text-base font-semibold text-gray-900 mb-3">Aktivitas Terbaru</h3>
           <div className="space-y-3">
             {stats.recentActivities.length > 0 ? (
