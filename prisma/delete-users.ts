@@ -1,22 +1,11 @@
-import { PrismaClient } from "@prisma/client";
+import { runD1Sql } from "./d1";
 
-const prisma = new PrismaClient();
+const remote = process.argv.includes("--remote");
 
-async function main() {
-  console.log("🗑️  Deleting all users...");
-
-  await prisma.account.deleteMany({});
-  await prisma.session.deleteMany({});
-  await prisma.user.deleteMany({});
-
+function main() {
+  console.log(`🗑️  Deleting all users from D1 (${remote ? "remote" : "local"})...`);
+  runD1Sql(["DELETE FROM session;", "DELETE FROM account;", "DELETE FROM user;"], { remote });
   console.log("✅ Deleted all users");
 }
 
-main()
-  .catch((e) => {
-    console.error("❌ Error deleting users:", e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+main();

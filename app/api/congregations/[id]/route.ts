@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+    const prisma = await getPrisma();
   try {
     const { id } = await params;
     const congregation = await prisma.congregation.findUnique({
@@ -33,6 +34,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+    const prisma = await getPrisma();
   try {
     const { id } = await params;
     const body = await request.json();
@@ -79,6 +81,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+    const prisma = await getPrisma();
   try {
     const { id } = await params;
     await prisma.congregation.delete({

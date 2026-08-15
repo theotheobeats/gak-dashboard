@@ -1,9 +1,10 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../.export-client"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -69,20 +70,19 @@ model Verification {
 }
 
 model Reflection {
-  id              String   @id
+  id              String            @id
   title           String
   content         String
   publishDate     DateTime?
-  slug            String   @unique
-  // DRAFT | PUBLISHED (enum unsupported on SQLite)
-  status          String   @default("DRAFT")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  slug            String            @unique
+  status          PublicationStatus @default(DRAFT)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
   authorId        String
   featuredImageId String?
   tags            ReflectionTag[]
-  author          User     @relation(fields: [authorId], references: [id])
-  featuredImage   Image?   @relation("FeaturedImage", fields: [featuredImageId], references: [id])
+  author          User              @relation(fields: [authorId], references: [id])
+  featuredImage   Image?            @relation("FeaturedImage", fields: [featuredImageId], references: [id])
 
   @@map("reflections")
 }
@@ -149,7 +149,6 @@ model ContactSubmission {
   phone     String?
   subject   String?
   message   String
-  // NEW | REVIEWED | ARCHIVED
   status    String   @default("NEW")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -164,7 +163,6 @@ model Congregation {
   nameWithoutTitle String?
   birthday         DateTime?
   age              Int?
-  // active | inactive
   status           String       @default("active")
   whatsappNumber   String?      @unique
   address          String?
@@ -205,10 +203,8 @@ model Inventory {
   id           String                 @id @default(uuid())
   name         String
   quantity     Int
-  // SOUNDSYSTEM | MULTIMEDIA | OTHER
-  category     String
-  // GOOD | DAMAGED | MAINTENANCE | DISPOSED
-  status       String
+  category     InventoryCategory
+  status       InventoryStatus
   price        Int
   purchaseDate DateTime
   createdAt    DateTime               @default(now())
@@ -220,29 +216,50 @@ model Inventory {
 }
 
 model InventoryInspection {
-  id          String    @id @default(uuid())
-  // GOOD | DAMAGED | MAINTENANCE | DISPOSED
-  status      String
+  id          String          @id @default(uuid())
+  status      InventoryStatus
   inventoryId String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  inventory   Inventory       @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
 
   @@map("inventory_inspections")
 }
 
 model InventoryMaintenance {
-  id          String     @id @default(uuid())
+  id          String                     @id @default(uuid())
   name        String
   description String?
-  // ONGOING | COMPLETED
-  status      String
+  status      InventoryMaintenanceStatus
   cost        Int
   quantity    Int
   inventoryId String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  inventory   Inventory  @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+  inventory   Inventory                  @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
 
   @@map("inventory_maintenances")
+}
+
+enum PublicationStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum InventoryCategory {
+  SOUNDSYSTEM
+  MULTIMEDIA
+  OTHER
+}
+
+enum InventoryStatus {
+  GOOD
+  DAMAGED
+  MAINTENANCE
+  DISPOSED
+}
+
+enum InventoryMaintenanceStatus {
+  ONGOING
+  COMPLETED
 }

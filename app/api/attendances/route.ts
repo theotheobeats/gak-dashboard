@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 
 
 export async function GET(_request: NextRequest) {
+    const prisma = await getPrisma();
   try {
     const attendances = await prisma.attendance.findMany({
       include: {
@@ -31,6 +32,7 @@ export async function GET(_request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    const prisma = await getPrisma();
   try {
     const body = await request.json();
     const { attendees, sessionName } = body;
@@ -60,55 +62,54 @@ export async function POST(request: NextRequest) {
     const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
     const currentDate = new Date(utc + (3600000 * gmt7Offset));
 
-    const results = await prisma.$transaction(async (tx) => {
-      const createdAttendances = [];
+    // D1 does not support transactions; each write commits individually.
+    const createdAttendances = [];
 
-      for (const attendee of attendees) {
-        const { congregationId, name, isNewCongregation } = attendee;
+    for (const attendee of attendees) {
+      const { congregationId, name, isNewCongregation } = attendee;
 
-        let finalCongregationId = congregationId;
+      let finalCongregationId = congregationId;
 
-        if (isNewCongregation || !congregationId) {
-          const newCongregation = await tx.congregation.create({
-            data: {
-              name,
-              status: "active",
-            },
-          });
-          finalCongregationId = newCongregation.id;
-        }
+      if (isNewCongregation || !congregationId) {
+        const newCongregation = await prisma.congregation.create({
+          data: {
+            name,
+            status: "active",
+          },
+        });
+        finalCongregationId = newCongregation.id;
+      }
 
-        let sermonSession = await tx.sermonSession.findFirst({
-          where: {
+      let sermonSession = await prisma.sermonSession.findFirst({
+        where: {
+          name: sessionName,
+        },
+      });
+
+      if (!sermonSession) {
+        sermonSession = await prisma.sermonSession.create({
+          data: {
             name: sessionName,
           },
         });
-
-        if (!sermonSession) {
-          sermonSession = await tx.sermonSession.create({
-            data: {
-              name: sessionName,
-            },
-          });
-        }
-
-        const attendance = await tx.attendance.create({
-          data: {
-            congregationId: finalCongregationId,
-            sessionId: sermonSession.id,
-            date: currentDate,
-          },
-          include: {
-            congregation: true,
-            sermonSession: true,
-          },
-        });
-
-        createdAttendances.push(attendance);
       }
 
-      return createdAttendances;
-    });
+      const attendance = await prisma.attendance.create({
+        data: {
+          congregationId: finalCongregationId,
+          sessionId: sermonSession.id,
+          date: currentDate,
+        },
+        include: {
+          congregation: true,
+          sermonSession: true,
+        },
+      });
+
+      createdAttendances.push(attendance);
+    }
+
+    const results = createdAttendances;
 
     return NextResponse.json({
       success: true,

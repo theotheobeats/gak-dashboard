@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 
 
 export async function GET(_request: NextRequest) {
+    const prisma = await getPrisma();
   try {
     const albums = await prisma.album.findMany({
       include: {
@@ -29,6 +30,7 @@ export async function GET(_request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    const prisma = await getPrisma();
   try {
     const body = await request.json();
     const { name, description, date, uploadedById } = body;

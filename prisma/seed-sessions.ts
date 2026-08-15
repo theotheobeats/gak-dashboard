@@ -1,35 +1,23 @@
-import { PrismaClient } from "@prisma/client";
+import { randomUUID } from "node:crypto";
+import { runD1Sql, sqlString } from "./d1";
 
-const prisma = new PrismaClient();
+const remote = process.argv.includes("--remote");
 
-async function main() {
-  console.log("🌱 Seeding sermon sessions...");
+const sessions = [{ name: "Session 1" }, { name: "Session 2" }];
 
-  const sessions = [
-    { name: "Session 1" },
-    { name: "Session 2" },
-  ];
+function main() {
+  console.log(`🌱 Seeding ${sessions.length} sermon sessions into D1 (${remote ? "remote" : "local"})...`);
 
-  for (const session of sessions) {
-    const existing = await prisma.sermonSession.findFirst({
-      where: { name: session.name },
-    });
+  const now = new Date().toISOString();
+  const rows = sessions.map(
+    (s) => `(${sqlString(randomUUID())}, ${sqlString(s.name)}, ${sqlString(now)}, ${sqlString(now)})`
+  );
 
-    if (!existing) {
-      await prisma.sermonSession.create({
-        data: session,
-      });
-    }
-  }
-
+  runD1Sql(
+    [`INSERT INTO sermon_sessions (id, name, createdAt, updatedAt) VALUES\n${rows.join(",\n")};`],
+    { remote }
+  );
   console.log("✅ Seeded sermon sessions");
 }
 
-main()
-  .catch((e) => {
-    console.error("❌ Error seeding sessions:", e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+main();

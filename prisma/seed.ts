@@ -1,32 +1,33 @@
-import { PrismaClient } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import congregations from "../congregations.json";
+import { runD1Sql, sqlDate, sqlString } from "./d1";
 
-const prisma = new PrismaClient();
+const remote = process.argv.includes("--remote");
 
-async function main() {
-  console.log("🌱 Starting database seed...");
+function main() {
+  console.log(
+    `🌱 Seeding ${congregations.length} congregations into D1 (${remote ? "remote" : "local"})...`
+  );
 
-  for (const congregation of congregations) {
-    await prisma.congregation.create({
-      data: {
-        name: congregation.name,
-        title: congregation.title || null,
-        nameWithoutTitle: congregation.nameWithoutTitle || null,
-        birthday: congregation.birthday ? new Date(congregation.birthday) : null,
-        age: congregation.age || null,
-        status: congregation.status || "active",
-      },
-    });
-  }
+  const now = new Date().toISOString();
+  const rows = congregations.map((c: (typeof congregations)[number]) => {
+    const id = randomUUID();
+    const birthday = c.birthday ? `${c.birthday}T00:00:00.000Z` : null;
+    return `(${sqlString(id)}, ${sqlString(c.name)}, ${sqlString(c.title ?? null)}, ${sqlString(
+      c.nameWithoutTitle ?? null
+    )}, ${sqlDate(birthday)}, ${c.age ?? "NULL"}, ${sqlString(c.status ?? "active")}, ${sqlString(
+      now
+    )}, ${sqlString(now)})`;
+  });
 
+  const statements = [
+    `INSERT INTO congregations (id, name, title, nameWithoutTitle, birthday, age, status, createdAt, updatedAt) VALUES\n${rows.join(
+      ",\n"
+    )};`,
+  ];
+
+  runD1Sql(statements, { remote });
   console.log(`✅ Seeded ${congregations.length} congregations`);
 }
 
-main()
-  .catch((e) => {
-    console.error("❌ Error seeding database:", e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+main();

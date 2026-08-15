@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 
 
 export async function POST(request: NextRequest) {
+    const prisma = await getPrisma();
   try {
     const body = await request.json();
     const { url, alt, caption, width, height, size, albumId, userId } = body;
@@ -49,6 +50,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+    const prisma = await getPrisma();
   try {
     const { id } = await params;
 

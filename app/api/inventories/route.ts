@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 
 
 export async function GET(request: NextRequest) {
+    const prisma = await getPrisma();
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category");
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
+        { name: { contains: search } },
       ];
     }
 
@@ -54,6 +55,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    const prisma = await getPrisma();
   try {
     const body = await request.json();
     const { name, quantity, category, status, price, purchaseDate } = body;

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 
 
 export async function GET(_request: NextRequest) {
+    const prisma = await getPrisma();
   try {
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth();

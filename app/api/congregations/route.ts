@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getPrisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
+    const prisma = await getPrisma();
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
@@ -17,9 +18,9 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { title: { contains: search, mode: "insensitive" } },
-        { whatsappNumber: { contains: search, mode: "insensitive" } },
+        { name: { contains: search } },
+        { title: { contains: search } },
+        { whatsappNumber: { contains: search } },
       ];
     }
 
@@ -50,6 +51,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    const prisma = await getPrisma();
   try {
     const body = await request.json();
     const { name, title, birthday, whatsappNumber, address, status } = body;

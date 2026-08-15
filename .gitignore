@@ -36,8 +36,18 @@ yarn-error.log*
 # vercel
 .vercel
 
+# wrangler / local D1 state
+.wrangler
+
+# OpenNext build output
+.open-next
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 
 /app/generated/prisma
+
+# one-off Postgres export client + exported data
+.export-client
+data-export

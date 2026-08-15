@@ -16,7 +16,14 @@
   "vars": {
     "BETTER_AUTH_SECRET": "6MpNBQ4vBWp4M0wBSNiGi3CZSKUdZBCF",
     "BETTER_AUTH_URL": "https://dash.anugerahkristus.org",
-    "NEXT_PUBLIC_APP_URL": "https://dash.anugerahkristus.org",
-    "DATABASE_URL": "prisma://accelerate.prisma-data.net/?api_key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqd3RfaWQiOjEsInNlY3VyZV9rZXkiOiJza19fYUNiZzZvVnhoTlQtUXZRb0oteTgiLCJhcGlfa2V5IjoiMDFLWUQyMEs2VENTVDRFQkpaRkU4MUVLNkYiLCJ0ZW5hbnRfaWQiOiIwNTVhNzU5MzczMDEzODMwMzk1NzY4ODk0ZTU2YWI2YzU3MGJkMDJlZDM0MmNmZjAwYWY3NjQ3NjRkZTNmZDdhIiwiaW50ZXJuYWxfc2VjcmV0IjoiOThiOGQyZGItODYxNC00OThiLThiMjItMzc1MDNlYjljYjM5In0.ZjGh2zvWElLGnXK4dIfhlJdy9PlbbgX3chpIaTjgJx8"
-  }
+    "NEXT_PUBLIC_APP_URL": "https://dash.anugerahkristus.org"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "gak-dashboard",
+      "database_id": "988bc08e-a4a9-441a-bc91-b70ecf6e6cd2",
+      "migrations_dir": "migrations"
+    }
+  ]
 }
