@@ -39,19 +39,19 @@ export function Sidebar() {
                             href="/congregations"
                             icon={<Users size={18} />}
                             label="Jemaat"
-                            active={pathname === "/congregations"}
+                            active={pathname.startsWith("/congregations")}
                         />
                         <NavItem
                             href="/attendance"
                             icon={<Calendar size={18} />}
                             label="Kehadiran"
-                            active={pathname === "/attendance"}
+                            active={pathname.startsWith("/attendance")}
                         />
                         <NavItem
                             href="/inventory"
                             icon={<Package size={18} />}
                             label="Inventaris"
-                            active={pathname === "/inventory"}
+                            active={pathname.startsWith("/inventory")}
                         />
                         <NavItem
                             href="/media"

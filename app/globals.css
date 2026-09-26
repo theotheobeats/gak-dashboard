@@ -6,6 +6,18 @@
   --primary: #3b82f6; /* blue-500 */
   --primary-dark: #1d4ed8; /* blue-700 */
   --secondary: #e2e8f0; /* slate-200 */
+
+  --device-canvas: #e9e5db;
+  --device-surface: #f8f5ee;
+  --device-edge: #d2ccc0;
+  --device-ink: #16181a;
+  --device-accent: #e0502a;
+  --device-accent-dark: #b83c19;
+  --device-screen: #101214;
+  --device-screen-ink: #f1ead9;
+  --device-mute: #6b665c;
+  --device-ok: #35704c;
+  --device-ok-dark: #1f4a33;
 }
 
 @theme inline {
@@ -14,6 +26,17 @@
   --color-primary: var(--primary);
   --color-primary-dark: var(--primary-dark);
   --color-secondary: var(--secondary);
+  --color-canvas: var(--device-canvas);
+  --color-surface: var(--device-surface);
+  --color-edge: var(--device-edge);
+  --color-ink: var(--device-ink);
+  --color-accent: var(--device-accent);
+  --color-accent-dark: var(--device-accent-dark);
+  --color-screen: var(--device-screen);
+  --color-screen-ink: var(--device-screen-ink);
+  --color-mute: var(--device-mute);
+  --color-ok: var(--device-ok);
+  --color-ok-dark: var(--device-ok-dark);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

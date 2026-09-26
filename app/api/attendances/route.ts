@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPrisma } from "@/lib/prisma";
+import { wibNow } from "@/lib/wib";
 
 
 export async function GET(_request: NextRequest) {
@@ -57,11 +58,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const now = new Date();
-    const gmt7Offset = 7;
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const currentDate = new Date(utc + (3600000 * gmt7Offset));
-
+    const currentDate = wibNow();
     // D1 does not support transactions; each write commits individually.
     const createdAttendances = [];
 

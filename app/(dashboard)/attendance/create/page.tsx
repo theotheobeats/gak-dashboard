@@ -1,272 +1,513 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, X, Search, Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  ArrowLeft,
+  Check,
+  Loader2,
+  Plus,
+  Search,
+  UserPlus,
+  X,
+} from "lucide-react";
 import toast from "react-hot-toast";
+import { BigButton } from "@/components/attendance/BigButton";
+import { DeviceShell, StepCard } from "@/components/attendance/DeviceShell";
+import { DisplayPanel } from "@/components/attendance/DisplayPanel";
+import {
+  SESSIONS,
+  attendanceKey,
+  congregationLabel,
+  sessionLabel,
+  sortByLabel,
+  type AttendanceRecord,
+  type CongregationRecord,
+} from "@/lib/attendance";
+import { formatStoredDay } from "@/lib/wib";
 
-interface Congregation {
-  id: string;
-  name: string;
-  title: string | null;
+interface TodayResponse {
+  success: boolean;
+  data: AttendanceRecord[];
+  counts: Record<string, number>;
+  total: number;
+  date: string;
 }
 
-interface Attendee {
-  congregationId: string | null;
-  name: string;
-  isNewCongregation: boolean;
+interface CongregationsResponse {
+  data: CongregationRecord[];
 }
+
+interface CreateAttendanceResponse {
+  success: boolean;
+  error?: string;
+}
+
+interface NewAttendee {
+  name: string;
+}
+
+const VISIBLE_MEMBERS = 60;
 
 export default function CreateAttendancePage() {
+  return (
+    <Suspense
+      fallback={
+        <DeviceShell className="flex min-h-[320px] items-center justify-center">
+          <Loader2 className="h-10 w-10 animate-spin text-accent" />
+        </DeviceShell>
+      }
+    >
+      <CreateAttendanceForm />
+    </Suspense>
+  );
+}
+
+function CreateAttendanceForm() {
   const router = useRouter();
-  const [attendees, setAttendees] = useState<Attendee[]>([]);
-  const [congregations, setCongregations] = useState<Congregation[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const initialSession = searchParams.get("session") || "";
+
+  const [session, setSession] = useState<string>(initialSession);
+  const [congregations, setCongregations] = useState<CongregationRecord[]>([]);
+  const [presentKeys, setPresentKeys] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [newAttendees, setNewAttendees] = useState<NewAttendee[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSession, setSelectedSession] = useState<string>("");
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [showAllMembers, setShowAllMembers] = useState(false);
+  const [isNewPersonOpen, setIsNewPersonOpen] = useState(false);
+  const [newPersonName, setNewPersonName] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const fetchCongregations = async () => {
+    const fetchData = async () => {
+      setIsLoading(true);
       try {
-        const response = await fetch("/api/congregations?pageSize=1000");
-        const result = await response.json();
-        if (result.data) {
-          setCongregations(result.data);
+        const [congregationResponse, todayResponse] = await Promise.all([
+          fetch("/api/congregations?pageSize=1000", { credentials: "include" }),
+          fetch("/api/attendances/today", { credentials: "include" }),
+        ]);
+
+        const congregationResult =
+          (await congregationResponse.json()) as CongregationsResponse;
+        if (congregationResult.data) {
+          setCongregations(sortByLabel(congregationResult.data));
+        }
+
+        const todayResult = (await todayResponse.json()) as TodayResponse;
+        if (todayResult.success) {
+          setPresentKeys(
+            new Set(
+              todayResult.data.map((attendance) =>
+                attendanceKey(
+                  attendance.congregation.id,
+                  attendance.sermonSession.name
+                )
+              )
+            )
+          );
         }
       } catch (error) {
-        console.error("Error fetching congregations:", error);
+        console.error("Error fetching attendance form data:", error);
         toast.error("Gagal memuat data jemaat");
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    fetchCongregations();
+    fetchData();
   }, []);
 
-  const filteredCongregations = congregations.filter((c) => {
-    const fullName = c.title ? `${c.title} ${c.name}` : c.name;
-    return fullName.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  const query = searchQuery.trim();
+  const normalizedQuery = query.toLowerCase();
 
-  const handleClickOutside = (event: MouseEvent) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-      setIsDropdownOpen(false);
-    }
+  const filteredMembers = useMemo(() => {
+    if (!normalizedQuery) return congregations;
+    return congregations.filter((congregation) =>
+      congregationLabel(congregation).toLowerCase().includes(normalizedQuery)
+    );
+  }, [congregations, normalizedQuery]);
+
+  const visibleMembers = showAllMembers
+    ? filteredMembers
+    : filteredMembers.slice(0, VISIBLE_MEMBERS);
+
+  const hasExactMatch = useMemo(
+    () =>
+      congregations.some(
+        (congregation) =>
+          congregationLabel(congregation).toLowerCase() === normalizedQuery
+      ),
+    [congregations, normalizedQuery]
+  );
+
+  const totalSelected = selectedIds.size + newAttendees.length;
+  const canSubmit = Boolean(session) && totalSelected > 0 && !isSubmitting;
+
+  const toggleMember = (congregationId: string) => {
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(congregationId)) {
+        next.delete(congregationId);
+      } else {
+        next.add(congregationId);
+      }
+      return next;
+    });
   };
 
-  useEffect(() => {
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const selectCongregation = (congregation: Congregation) => {
-    setAttendees([
-      ...attendees,
-      {
-        congregationId: congregation.id,
-        name: congregation.name,
-        isNewCongregation: false,
-      },
-    ]);
+  const addNewAttendee = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setNewAttendees((previous) => [...previous, { name: trimmed }]);
     setSearchQuery("");
-    setIsDropdownOpen(false);
+    setNewPersonName("");
+    setIsNewPersonOpen(false);
   };
 
-  const addNewCongregation = (name: string) => {
-    if (name.trim()) {
-      setAttendees([
-        ...attendees,
-        {
-          congregationId: null,
-          name: name.trim(),
-          isNewCongregation: true,
-        },
-      ]);
-      setSearchQuery("");
-      setIsDropdownOpen(false);
-    }
+  const removeNewAttendee = (index: number) => {
+    setNewAttendees((previous) => previous.filter((_, i) => i !== index));
   };
 
-  const removeAttendee = (index: number) => {
-    setAttendees(attendees.filter((_, i) => i !== index));
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setNewAttendees([]);
+    toast.success("Pilihan dikosongkan");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!canSubmit) return;
+
     setIsSubmitting(true);
 
-    if (attendees.length === 0) {
-      toast.error("Tambahkan minimal satu peserta");
-      setIsSubmitting(false);
-      return;
-    }
+    const attendees = [
+      ...congregations
+        .filter((congregation) => selectedIds.has(congregation.id))
+        .map((congregation) => ({
+          congregationId: congregation.id,
+          name: congregation.name,
+          isNewCongregation: false,
+        })),
+      ...newAttendees.map((attendee) => ({
+        congregationId: null,
+        name: attendee.name,
+        isNewCongregation: true,
+      })),
+    ];
 
     try {
       const response = await fetch("/api/attendances", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attendees, sessionName: selectedSession }),
+        credentials: "include",
+        body: JSON.stringify({ attendees, sessionName: session }),
       });
 
-      const result = await response.json();
+      const result = (await response.json()) as CreateAttendanceResponse;
 
-      if (result.success) {
-        toast.success(`Berhasil mencatat ${attendees.length} kehadiran`);
+      if (response.ok && result.success) {
+        toast.success(`${attendees.length} kehadiran tersimpan`);
         router.push("/attendance");
       } else {
-        toast.error(result.error || "Gagal mencatat kehadiran");
+        toast.error(result.error || "Gagal menyimpan absensi");
       }
     } catch (error) {
       console.error("Error creating attendance:", error);
-      toast.error("Gagal mencatat kehadiran");
+      toast.error("Gagal menyimpan absensi");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const today = new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  if (isLoading) {
+    return (
+      <DeviceShell className="flex min-h-[320px] items-center justify-center">
+        <Loader2 className="h-10 w-10 animate-spin text-accent" />
+      </DeviceShell>
+    );
+  }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <Link
-          href="/attendance"
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          <ArrowLeft size={20} className="text-gray-600" />
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
-            Buat Absensi
-          </h1>
-          <p className="text-gray-500 text-xs sm:text-sm">
-            {selectedSession || "Pilih sesi"} • {today}
-          </p>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Session Selection */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-          <label className="block text-xs font-medium text-gray-700 mb-2">
-            Sesi Kebaktian
-          </label>
-          <select
-            value={selectedSession}
-            onChange={(e) => setSelectedSession(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm bg-white"
-          >
-            <option value="">Pilih sesi...</option>
-            <option value="Session 1">Session 1</option>
-            <option value="Session 2">Session 2</option>
-          </select>
-        </div>
-
-        {/* Congregation Selection */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-          <div className="relative" ref={dropdownRef}>
-            <div
-              onClick={() => setIsDropdownOpen(true)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-gray-900 bg-white cursor-pointer flex items-center justify-between text-sm hover:border-gray-300"
-            >
-              <span className={searchQuery ? "text-gray-900" : "text-gray-400"}>
-                {searchQuery || "Cari atau tambah jemaat..."}
-              </span>
-              <Search size={18} className="text-gray-400" />
-            </div>
-
-            {isDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 z-10 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-                <div className="p-3 border-b border-gray-100">
-                  <div className="flex items-center px-3 py-2 bg-gray-50 rounded-lg">
-                    <Search size={16} className="text-gray-400 mr-2" />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="flex-1 text-sm outline-none bg-transparent text-gray-900"
-                      placeholder="Ketik nama jemaat..."
-                      autoFocus
-                    />
-                  </div>
-                </div>
-
-                <div className="max-h-60 overflow-y-auto">
-                  {filteredCongregations.length > 0 ? (
-                    filteredCongregations.map((c) => (
-                      <div
-                        key={c.id}
-                        onClick={() => selectCongregation(c)}
-                        className="px-4 py-3 text-sm hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-b-0 text-gray-900"
-                      >
-                        {c.title ? `${c.title} ` : ""}{c.name}
-                      </div>
-                    ))
-                  ) : searchQuery ? (
-                    <div className="p-3">
-                      <button
-                        type="button"
-                        onClick={() => addNewCongregation(searchQuery)}
-                        className="w-full px-4 py-3 bg-primary/10 text-primary rounded-lg text-sm font-medium hover:bg-primary/20 flex items-center justify-center gap-2"
-                      >
-                        <Plus size={16} />
-                        <span>Tambah &quot;{searchQuery}&quot; sebagai jemaat baru</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="px-4 py-3 text-sm text-gray-500">
-                      Ketik untuk mencari jemaat
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {attendees.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-100">
-              <p className="text-xs text-gray-500 mb-2">
-                {attendees.length} jemaat ditambahkan:
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {attendees.map((attendee, index) => (
-                  <div
-                    key={index}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm"
-                  >
-                    <span>{attendee.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeAttendee(index)}
-                      className="hover:bg-primary/20 rounded-full p-0.5 transition-colors"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-3">
+    <DeviceShell>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <header className="flex items-center gap-3 px-1">
           <Link
             href="/attendance"
-            className="flex-1 px-4 py-3 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors font-medium text-sm text-center"
+            aria-label="Kembali ke absensi"
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 border-edge bg-surface text-ink shadow-[0_4px_0_var(--device-edge)] active:translate-y-[4px] active:shadow-none"
           >
-            Batal
+            <ArrowLeft size={26} strokeWidth={3} />
           </Link>
-          <button
-            type="submit"
-            disabled={isSubmitting || attendees.length === 0 || !selectedSession}
-            className="flex-1 px-4 py-3 rounded-lg bg-primary hover:bg-primary-dark text-white transition-colors font-medium shadow-lg hover:shadow-primary/20 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSubmitting ? "Menyimpan..." : "Simpan Absensi"}
-          </button>
+          <div className="min-w-0">
+            <h1 className="text-xl font-black uppercase tracking-tight text-ink sm:text-2xl">
+              Isi Absensi
+            </h1>
+            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-mute sm:text-xs">
+              {formatStoredDay(new Date(), {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+            </p>
+          </div>
+        </header>
+
+        <DisplayPanel
+          label="Akan disimpan"
+          value={totalSelected}
+          unit="orang"
+          sub={session ? sessionLabel(session) : "Pilih kebaktian dulu"}
+          hint="tekan ✓ untuk simpan"
+        />
+
+        <StepCard step={1} title="Pilih kebaktian">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {SESSIONS.map((option) => {
+              const isActive = session === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setSession(option)}
+                  className={`flex min-h-20 items-center justify-center gap-3 rounded-2xl border-2 px-4 text-xl font-bold uppercase tracking-wide transition-all duration-100 active:translate-y-[4px] active:shadow-none ${
+                    isActive
+                      ? "border-ink bg-ink text-screen-ink shadow-[0_6px_0_#000000]"
+                      : "border-edge bg-surface text-ink shadow-[0_6px_0_var(--device-edge)]"
+                  }`}
+                >
+                  {isActive && <Check size={28} strokeWidth={4} />}
+                  {sessionLabel(option)}
+                </button>
+              );
+            })}
+          </div>
+        </StepCard>
+
+        <StepCard step={2} title="Tandai yang hadir">
+          {!session ? (
+            <p className="rounded-2xl border-2 border-dashed border-edge px-4 py-8 text-center text-base font-semibold text-mute">
+              Pilih kebaktian pada langkah 1 dulu
+            </p>
+          ) : (
+            <>
+              <div className="relative">
+                <Search
+                  size={22}
+                  className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-mute"
+                />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      if (query && !hasExactMatch) addNewAttendee(query);
+                    }
+                  }}
+                  placeholder="Ketik nama jemaat…"
+                  className="h-16 w-full rounded-2xl border-2 border-edge bg-surface pr-4 pl-12 text-lg font-semibold text-ink placeholder:text-mute focus:border-accent focus:outline-none"
+                />
+              </div>
+
+              {query && !hasExactMatch && (
+                <button
+                  type="button"
+                  onClick={() => addNewAttendee(query)}
+                  className="mt-3 flex min-h-16 w-full items-center gap-3 rounded-2xl border-2 border-dashed border-accent bg-accent/10 px-4 py-2 text-left active:translate-y-[3px]"
+                >
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-accent text-accent-dark">
+                    <UserPlus size={24} strokeWidth={3} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-accent-dark">
+                      Tambah orang baru
+                    </span>
+                    <span className="block truncate text-base font-bold text-ink sm:text-lg">
+                      {query}
+                    </span>
+                  </span>
+                </button>
+              )}
+
+              {!isNewPersonOpen ? (
+                <BigButton
+                  variant="surface"
+                  size="lg"
+                  block
+                  className="mt-3"
+                  onClick={() => setIsNewPersonOpen(true)}
+                >
+                  <UserPlus size={22} strokeWidth={3} />
+                  Orang baru / tamu
+                </BigButton>
+              ) : (
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+                  <input
+                    value={newPersonName}
+                    onChange={(event) => setNewPersonName(event.target.value)}
+                    placeholder="Nama orang baru…"
+                    autoFocus
+                    className="h-14 flex-1 rounded-2xl border-2 border-edge bg-surface px-4 text-base font-semibold text-ink placeholder:text-mute focus:border-accent focus:outline-none"
+                  />
+                  <BigButton
+                    variant="primary"
+                    size="lg"
+                    onClick={() => addNewAttendee(newPersonName)}
+                    disabled={!newPersonName.trim()}
+                  >
+                    <Plus size={22} strokeWidth={3} />
+                    Tambah
+                  </BigButton>
+                  <BigButton
+                    variant="quiet"
+                    size="lg"
+                    onClick={() => {
+                      setIsNewPersonOpen(false);
+                      setNewPersonName("");
+                    }}
+                  >
+                    Tutup
+                  </BigButton>
+                </div>
+              )}
+
+              {newAttendees.length > 0 && (
+                <div className="mt-5">
+                  <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.2em] text-accent-dark">
+                    Orang baru ({newAttendees.length})
+                  </p>
+                  <div className="space-y-2">
+                    {newAttendees.map((attendee, index) => (
+                      <div
+                        key={`${attendee.name}-${index}`}
+                        className="flex min-h-14 items-center justify-between gap-3 rounded-2xl border-2 border-accent bg-accent/10 px-4 py-2"
+                      >
+                        <span className="truncate text-base font-bold text-ink sm:text-lg">
+                          {attendee.name}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={`Hapus ${attendee.name}`}
+                          onClick={() => removeNewAttendee(index)}
+                          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-accent bg-surface text-accent-dark active:translate-y-[3px]"
+                        >
+                          <X size={22} strokeWidth={3} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-5">
+                <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.2em] text-mute">
+                  {filteredMembers.length} jemaat · tekan nama untuk menandai
+                </p>
+                <div className="space-y-2">
+                  {visibleMembers.map((congregation) => {
+                    const isSelected = selectedIds.has(congregation.id);
+                    const isAlreadyPresent = presentKeys.has(
+                      attendanceKey(congregation.id, session)
+                    );
+
+                    return (
+                      <button
+                        key={congregation.id}
+                        type="button"
+                        disabled={isAlreadyPresent}
+                        onClick={() => toggleMember(congregation.id)}
+                        className={`flex min-h-16 w-full items-center justify-between gap-3 rounded-2xl border-2 px-4 py-3 text-left transition-all duration-100 ${
+                          isSelected
+                            ? "border-accent-dark bg-accent text-white shadow-[0_4px_0_var(--device-accent-dark)] active:translate-y-[4px] active:shadow-none"
+                            : isAlreadyPresent
+                              ? "border-edge bg-canvas text-mute"
+                              : "border-edge bg-surface text-ink shadow-[0_4px_0_var(--device-edge)] active:translate-y-[4px] active:shadow-none"
+                        }`}
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-base font-bold sm:text-lg">
+                            {congregationLabel(congregation)}
+                          </span>
+                          {isAlreadyPresent && (
+                            <span className="font-mono text-[10px] uppercase tracking-[0.2em]">
+                              sudah tercatat
+                            </span>
+                          )}
+                        </span>
+                        <span
+                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 ${
+                            isSelected
+                              ? "border-white bg-white text-accent-dark"
+                              : isAlreadyPresent
+                                ? "border-mute/40 bg-mute/15 text-mute"
+                                : "border-edge bg-canvas text-mute"
+                          }`}
+                        >
+                          {isSelected || isAlreadyPresent ? (
+                            <Check size={24} strokeWidth={4} />
+                          ) : (
+                            <Plus size={24} strokeWidth={3} />
+                          )}
+                        </span>
+                      </button>
+                    );
+                  })}
+
+                  {filteredMembers.length === 0 && (
+                    <p className="rounded-2xl border-2 border-dashed border-edge px-4 py-6 text-center text-base font-semibold text-mute">
+                      Jemaat tidak ditemukan
+                    </p>
+                  )}
+                </div>
+
+                {!showAllMembers && filteredMembers.length > VISIBLE_MEMBERS && (
+                  <BigButton
+                    variant="surface"
+                    block
+                    className="mt-3"
+                    onClick={() => setShowAllMembers(true)}
+                  >
+                    Tampilkan semua ({filteredMembers.length})
+                  </BigButton>
+                )}
+              </div>
+            </>
+          )}
+        </StepCard>
+
+        <div className="sticky bottom-0 z-20 -mx-3 -mb-3 rounded-b-[30px] border-t-2 border-edge bg-canvas/95 px-3 pt-4 pb-3 backdrop-blur sm:-mx-5 sm:-mb-5 sm:px-5 sm:pb-5">
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <BigButton
+              variant="surface"
+              size="xl"
+              onClick={clearSelection}
+              disabled={totalSelected === 0}
+              className="sm:w-40"
+            >
+              Reset
+            </BigButton>
+            <BigButton
+              type="submit"
+              variant="primary"
+              size="xl"
+              block
+              disabled={!canSubmit}
+            >
+              {isSubmitting ? (
+                <Loader2 size={26} className="animate-spin" />
+              ) : (
+                <Check size={28} strokeWidth={4} />
+              )}
+              {isSubmitting ? "Menyimpan…" : `Simpan ${totalSelected}`}
+            </BigButton>
+          </div>
         </div>
       </form>
-    </div>
+    </DeviceShell>
   );
 }
