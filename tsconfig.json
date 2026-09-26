@@ -30,5 +30,12 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    // One-off Postgres -> D1 migration script. It imports the generated,
+    // gitignored ../.export-client, which does not exist on a clean CI
+    // checkout, so it cannot type-check during `next build` (TS2307).
+    // It is a standalone `tsx` CLI tool and is never bundled by Next.js.
+    "prisma/export-pg.ts"
+  ]
 }
