@@ -45,7 +45,7 @@ export function DisplayPanel({
             </p>
           )}
           <div className="flex items-end gap-2">
-            <span className="font-mono text-5xl leading-none font-bold tabular-nums sm:text-6xl">
+            <span className="font-mono text-4xl leading-none font-bold tabular-nums sm:text-5xl">
               {value}
             </span>
             {unit && (
@@ -78,6 +78,46 @@ export function DisplayPanel({
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+export function StatPanel({
+  label,
+  value,
+  unit,
+  hint,
+  icon,
+}: {
+  label: string;
+  value: ReactNode;
+  unit?: string;
+  hint?: string;
+  icon?: ReactNode;
+}) {
+  return (
+    <div className="rounded-[28px] border-2 border-edge bg-surface p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-mute">
+          {label}
+        </p>
+        {icon}
+      </div>
+      <p className="mt-3 flex items-end gap-2">
+        <span className="font-mono text-3xl leading-none font-bold tabular-nums text-ink sm:text-4xl">
+          {value}
+        </span>
+        {unit && (
+          <span className="mb-0.5 font-mono text-[11px] uppercase tracking-[0.2em] text-mute">
+            {unit}
+          </span>
+        )}
+      </p>
+      {hint && (
+        <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.15em] text-mute">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }

@@ -1,10 +1,32 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Plus, Search, Edit, Trash2, X, ChevronLeft, ChevronRight, Package } from "lucide-react";
-import { useSession } from "@/lib/auth-client";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { CalendarDays, Package, Pencil, Plus, Trash2 } from "lucide-react";
+import { PageShell, Card } from "@/components/ui/Shell";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { BigButton, BigIconButton } from "@/components/ui/BigButton";
+import {
+  Field,
+  SearchInput,
+  SelectField,
+  TextField,
+} from "@/components/ui/Input";
+import { FilterChip, StatusPill } from "@/components/ui/StatusPill";
+import { Sheet } from "@/components/ui/Sheet";
+import { DisplayPanel } from "@/components/ui/DisplayPanel";
+import { EmptyState, LoadingBlock } from "@/components/ui/Feedback";
+import { Pagination } from "@/components/ui/Pagination";
+import {
+  INVENTORY_CATEGORIES,
+  INVENTORY_STATUSES,
+  categoryLabel,
+  formatDateID,
+  formatRupiah,
+  inventoryStatusLabel,
+} from "@/lib/inventory";
+import { statusTone } from "@/lib/status";
 
 interface Inventory {
   id: string;
@@ -17,8 +39,24 @@ interface Inventory {
   createdAt: string;
 }
 
+interface InventoriesResponse {
+  data: Inventory[];
+  total: number;
+  totalPages: number;
+}
+
+const PAGE_SIZES = [10, 20, 50];
+
+const EMPTY_FORM = {
+  name: "",
+  quantity: "",
+  category: "OTHER",
+  status: "GOOD",
+  price: "",
+  purchaseDate: "",
+};
+
 export default function InventoryPage() {
-  const { data: session } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [inventories, setInventories] = useState<Inventory[]>([]);
@@ -30,14 +68,9 @@ export default function InventoryPage() {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    quantity: "",
-    category: "OTHER",
-    status: "GOOD",
-    price: "",
-    purchaseDate: "",
-  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Inventory | null>(null);
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
   const fetchInventories = useCallback(async () => {
     try {
@@ -50,13 +83,14 @@ export default function InventoryPage() {
 
       const response = await fetch(`/api/inventories?${params.toString()}`);
       if (response.ok) {
-        const data = await response.json();
-        setInventories(data.data);
-        setTotal(data.total);
-        setTotalPages(data.totalPages);
+        const data = (await response.json()) as InventoriesResponse;
+        setInventories(data.data || []);
+        setTotal(data.total || 0);
+        setTotalPages(data.totalPages || 1);
       }
     } catch (error) {
       console.error("Error fetching inventories:", error);
+      toast.error("Gagal memuat inventaris");
     } finally {
       setLoading(false);
     }
@@ -70,8 +104,9 @@ export default function InventoryPage() {
     fetchInventories();
   }, [fetchInventories]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setIsSaving(true);
 
     try {
       const response = await fetch("/api/inventories", {
@@ -83,14 +118,7 @@ export default function InventoryPage() {
       if (response.ok) {
         toast.success("Inventaris berhasil ditambahkan");
         setShowModal(false);
-        setFormData({
-          name: "",
-          quantity: "",
-          category: "OTHER",
-          status: "GOOD",
-          price: "",
-          purchaseDate: "",
-        });
+        setFormData(EMPTY_FORM);
         fetchInventories();
       } else {
         const error = await response.json();
@@ -99,23 +127,22 @@ export default function InventoryPage() {
     } catch (error) {
       console.error("Error saving inventory:", error);
       toast.error("Gagal menyimpan inventaris");
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleEdit = (inventory: Inventory) => {
-    router.push(`/inventory/${inventory.id}/edit`);
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus inventaris ini?")) return;
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
 
     try {
-      const response = await fetch(`/api/inventories/${id}`, {
+      const response = await fetch(`/api/inventories/${deleteTarget.id}`, {
         method: "DELETE",
       });
 
       if (response.ok) {
         toast.success("Inventaris berhasil dihapus");
+        setDeleteTarget(null);
         fetchInventories();
       } else {
         toast.error("Gagal menghapus inventaris");
@@ -126,403 +153,320 @@ export default function InventoryPage() {
     }
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
-
-  const getCategoryLabel = (category: string) => {
-    const labels: Record<string, string> = {
-      SOUNDSYSTEM: "Sound System",
-      MULTIMEDIA: "Multimedia",
-      OTHER: "Lainnya",
-    };
-    return labels[category] || category;
-  };
-
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      GOOD: "Baik",
-      DAMAGED: "Rusak",
-      MAINTENANCE: "Perbaikan",
-      DISPOSED: "Dibuang",
-    };
-    return labels[status] || status;
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      GOOD: "bg-green-100 text-green-700",
-      DAMAGED: "bg-red-100 text-red-700",
-      MAINTENANCE: "bg-yellow-100 text-yellow-700",
-      DISPOSED: "bg-gray-100 text-gray-700",
-    };
-    return colors[status] || "bg-gray-100 text-gray-700";
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-gray-500 text-sm">Memuat...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-        <div className="flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
-            Manajemen Inventaris
-          </h1>
-          <p className="text-gray-500 text-xs sm:text-sm">
-            Kelola peralatan dan aset gereja
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            setFormData({
-              name: "",
-              quantity: "",
-              category: "OTHER",
-              status: "GOOD",
-              price: "",
-              purchaseDate: "",
-            });
-            setShowModal(true);
-          }}
-          className="px-3 sm:px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors shadow-lg hover:shadow-primary/20 flex items-center gap-2 w-full sm:w-auto justify-center text-sm"
-        >
-          <Plus size={18} />
-          <span className="hidden sm:inline">Tambah Inventaris</span>
-          <span className="sm:hidden">Tambah</span>
-        </button>
-      </div>
+    <PageShell width="wide">
+      <div className="space-y-5">
+        <PageHeader
+          eyebrow="Aset & peralatan"
+          title="Manajemen Inventaris"
+          subtitle="Kelola peralatan dan aset gereja"
+          action={
+            <BigButton
+              onClick={() => {
+                setFormData(EMPTY_FORM);
+                setShowModal(true);
+              }}
+              block
+            >
+              <Plus size={24} strokeWidth={3} />
+              Tambah Inventaris
+            </BigButton>
+          }
+        />
 
-      <div className="bg-white rounded-2xl p-3 sm:p-4 shadow-sm border border-gray-100">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Cari inventaris..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 text-gray-900 placeholder-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
-            />
+        <DisplayPanel
+          label="Total inventaris"
+          value={total}
+          unit="item"
+          sub={`Halaman ${page} dari ${Math.max(1, totalPages)}`}
+          hint="tekan tambah untuk mencatat"
+        />
+
+        <Card title="Cari & filter">
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Cari nama inventaris…"
+          />
+
+          <div className="mt-4 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-mute">
+                Kategori
+              </span>
+              <FilterChip
+                label="Semua"
+                active={categoryFilter === "all"}
+                onClick={() => setCategoryFilter("all")}
+              />
+              {INVENTORY_CATEGORIES.map((category) => (
+                <FilterChip
+                  key={category}
+                  label={categoryLabel(category)}
+                  active={categoryFilter === category}
+                  onClick={() => setCategoryFilter(category)}
+                />
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-mute">
+                Status
+              </span>
+              <FilterChip
+                label="Semua"
+                active={statusFilter === "all"}
+                onClick={() => setStatusFilter("all")}
+              />
+              {INVENTORY_STATUSES.map((status) => (
+                <FilterChip
+                  key={status}
+                  label={inventoryStatusLabel(status)}
+                  active={statusFilter === status}
+                  onClick={() => setStatusFilter(status)}
+                />
+              ))}
+            </div>
           </div>
-          <div className="flex gap-2">
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
-            >
-              <option value="all">Semua Kategori</option>
-              <option value="SOUNDSYSTEM">Sound System</option>
-              <option value="MULTIMEDIA">Multimedia</option>
-              <option value="OTHER">Lainnya</option>
-            </select>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
-            >
-              <option value="all">Semua Status</option>
-              <option value="GOOD">Baik</option>
-              <option value="DAMAGED">Rusak</option>
-              <option value="MAINTENANCE">Perbaikan</option>
-              <option value="DISPOSED">Dibuang</option>
-            </select>
-          </div>
-        </div>
+        </Card>
 
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="text-gray-500 text-sm">Memuat...</div>
-          </div>
+          <Card>
+            <LoadingBlock label="Memuat inventaris…" />
+          </Card>
         ) : inventories.length === 0 ? (
-          <div className="text-center py-8">
-            <Package className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-            <p className="text-gray-500 text-sm">
-              Tidak ada inventaris ditemukan. Tambahkan inventaris pertama Anda untuk memulai.
-            </p>
-          </div>
+          <Card>
+            <EmptyState
+              icon={<Package size={30} />}
+              title="Belum ada inventaris"
+              description="Tambahkan peralatan atau aset pertama"
+              action={
+                <BigButton
+                  className="mt-2"
+                  onClick={() => {
+                    setFormData(EMPTY_FORM);
+                    setShowModal(true);
+                  }}
+                >
+                  <Plus size={22} strokeWidth={3} />
+                  Tambah Inventaris
+                </BigButton>
+              }
+            />
+          </Card>
         ) : (
-          <>
-            <div className="overflow-x-auto -mx-3 sm:mx-0">
-              <table className="w-full min-w-[500px]">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-3 font-semibold text-gray-700 text-xs">
-                      Nama
-                    </th>
-                    <th className="text-left py-3 px-3 font-semibold text-gray-700 text-xs">
-                      Kategori
-                    </th>
-                    <th className="text-left py-3 px-3 font-semibold text-gray-700 text-xs">
-                      Jumlah
-                    </th>
-                    <th className="text-left py-3 px-3 font-semibold text-gray-700 text-xs">
-                      Status
-                    </th>
-                    <th className="text-left py-3 px-3 font-semibold text-gray-700 text-xs">
-                      Harga
-                    </th>
-                    <th className="text-right py-3 px-3 font-semibold text-gray-700 text-xs">
-                      Aksi
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {inventories.map((inventory) => (
-                    <tr
-                      key={inventory.id}
-                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="py-3 px-3">
-                        <div className="font-medium text-gray-900 text-sm">
-                          {inventory.name}
-                        </div>
-                      </td>
-                      <td className="py-3 px-3 text-sm text-gray-600">
-                        {getCategoryLabel(inventory.category)}
-                      </td>
-                      <td className="py-3 px-3 text-sm text-gray-600">
-                        {inventory.quantity}
-                      </td>
-                      <td className="py-3 px-3">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getStatusColor(inventory.status)}`}
-                        >
-                          {getStatusLabel(inventory.status)}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-sm text-gray-600">
-                        {formatPrice(inventory.price)}
-                      </td>
-                      <td className="py-3 px-3">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => handleEdit(inventory)}
-                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-gray-900"
-                            title="Edit"
-                          >
-                            <Edit size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(inventory.id)}
-                            className="p-1.5 hover:bg-red-50 rounded-lg transition-colors text-red-600 hover:text-red-700"
-                            title="Delete"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {totalPages > 1 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-4 border-t border-gray-200">
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <span>Menampilkan</span>
-                  <select
-                    value={pageSize}
-                    onChange={(e) => {
-                      setPageSize(parseInt(e.target.value));
-                      setPage(1);
-                    }}
-                    className="px-2 py-1 rounded-md border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-xs"
-                  >
-                    <option value="10">10</option>
-                    <option value="20">20</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                  </select>
-                  <span>per halaman</span>
-                  <span className="text-gray-400">|</span>
-                  <span>
-                    {Math.min((page - 1) * pageSize + 1, total)} - {Math.min(page * pageSize, total)} dari {total}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="p-1.5 rounded-md border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronLeft size={18} className="text-gray-600" />
-                  </button>
-
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (page <= 3) {
-                        pageNum = i + 1;
-                      } else if (page >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = page - 2 + i;
-                      }
-
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setPage(pageNum)}
-                          className={`w-8 h-8 rounded-md font-medium transition-colors text-xs ${
-                            page === pageNum
-                              ? "bg-primary text-white"
-                              : "border border-gray-200 hover:bg-gray-50 text-gray-700"
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
+          <div className="space-y-3">
+            {inventories.map((inventory) => (
+              <div
+                key={inventory.id}
+                className="rounded-[24px] border-2 border-edge bg-surface p-4 shadow-[0_4px_0_var(--device-edge-dark)]"
+              >
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-base font-bold text-ink sm:text-lg">
+                      {inventory.name}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <StatusPill>{categoryLabel(inventory.category)}</StatusPill>
+                      <StatusPill tone={statusTone(inventory.status)}>
+                        {inventoryStatusLabel(inventory.status)}
+                      </StatusPill>
+                    </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-mute">
+                      <span className="text-ink">
+                        {inventory.quantity} unit
+                      </span>
+                      <span>{formatRupiah(inventory.price)}</span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <CalendarDays size={14} />
+                        {formatDateID(inventory.purchaseDate)}
+                      </span>
+                    </div>
                   </div>
 
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="p-1.5 rounded-md border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronRight size={18} className="text-gray-600" />
-                  </button>
+                  <div className="flex shrink-0 gap-2">
+                    <BigIconButton
+                      label={`Ubah ${inventory.name}`}
+                      onClick={() => router.push(`/inventory/${inventory.id}/edit`)}
+                    >
+                      <Pencil size={24} strokeWidth={2.5} />
+                    </BigIconButton>
+                    <BigIconButton
+                      label={`Hapus ${inventory.name}`}
+                      variant="danger"
+                      onClick={() => setDeleteTarget(inventory)}
+                    >
+                      <Trash2 size={24} strokeWidth={2.5} />
+                    </BigIconButton>
+                  </div>
                 </div>
               </div>
-            )}
-          </>
+            ))}
+          </div>
         )}
+
+        <Card>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            label="item"
+            onPageChange={setPage}
+          />
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t-2 border-edge pt-4">
+            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-mute">
+              Per halaman
+            </span>
+            {PAGE_SIZES.map((size) => (
+              <FilterChip
+                key={size}
+                label={size.toString()}
+                active={pageSize === size}
+                onClick={() => {
+                  setPageSize(size);
+                  setPage(1);
+                }}
+              />
+            ))}
+          </div>
+        </Card>
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-md bg-white rounded-2xl p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-lg font-bold text-gray-900">
-                Tambah Inventaris
-              </h2>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X size={18} className="text-gray-500" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Nama *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Kategori
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
-                >
-                  <option value="SOUNDSYSTEM">Sound System</option>
-                  <option value="MULTIMEDIA">Multimedia</option>
-                  <option value="OTHER">Lainnya</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Jumlah
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  value={formData.quantity}
-                  onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Status
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
-                >
-                  <option value="GOOD">Baik</option>
-                  <option value="DAMAGED">Rusak</option>
-                  <option value="MAINTENANCE">Perbaikan</option>
-                  <option value="DISPOSED">Dibuang</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Harga (IDR)
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Tanggal Pembelian
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={formData.purchaseDate}
-                  onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors font-medium text-sm"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-3 py-2 rounded-lg bg-primary hover:bg-primary-dark text-white transition-colors font-medium shadow-lg hover:shadow-primary/20 text-sm"
-                >
-                  Buat
-                </button>
-              </div>
-            </form>
+      <Sheet
+        open={showModal}
+        title="Tambah Inventaris"
+        subtitle="Data barang baru"
+        onClose={() => setShowModal(false)}
+        footer={
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <BigButton
+              variant="surface"
+              size="lg"
+              block
+              onClick={() => setShowModal(false)}
+            >
+              Batal
+            </BigButton>
+            <BigButton
+              type="submit"
+              form="inventory-form"
+              size="lg"
+              block
+              disabled={isSaving || !formData.name.trim()}
+            >
+              {isSaving ? "Menyimpan…" : "Simpan"}
+            </BigButton>
           </div>
-        </div>
-      )}
-    </div>
+        }
+      >
+        <form id="inventory-form" onSubmit={handleSubmit} className="space-y-4">
+          <Field label="Nama barang">
+            <TextField
+              required
+              value={formData.name}
+              onChange={(event) =>
+                setFormData({ ...formData, name: event.target.value })
+              }
+              placeholder="Contoh: Speaker aktif 12 inci"
+            />
+          </Field>
+
+          <Field label="Kategori">
+            <SelectField
+              value={formData.category}
+              onChange={(event) =>
+                setFormData({ ...formData, category: event.target.value })
+              }
+            >
+              {INVENTORY_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {categoryLabel(category)}
+                </option>
+              ))}
+            </SelectField>
+          </Field>
+
+          <Field label="Jumlah">
+            <TextField
+              type="number"
+              required
+              min="0"
+              inputMode="numeric"
+              value={formData.quantity}
+              onChange={(event) =>
+                setFormData({ ...formData, quantity: event.target.value })
+              }
+            />
+          </Field>
+
+          <Field label="Status">
+            <SelectField
+              value={formData.status}
+              onChange={(event) =>
+                setFormData({ ...formData, status: event.target.value })
+              }
+            >
+              {INVENTORY_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {inventoryStatusLabel(status)}
+                </option>
+              ))}
+            </SelectField>
+          </Field>
+
+          <Field label="Harga (IDR)">
+            <TextField
+              type="number"
+              required
+              min="0"
+              inputMode="numeric"
+              value={formData.price}
+              onChange={(event) =>
+                setFormData({ ...formData, price: event.target.value })
+              }
+            />
+          </Field>
+
+          <Field label="Tanggal pembelian">
+            <TextField
+              type="date"
+              required
+              value={formData.purchaseDate}
+              onChange={(event) =>
+                setFormData({ ...formData, purchaseDate: event.target.value })
+              }
+            />
+          </Field>
+        </form>
+      </Sheet>
+
+      <Sheet
+        open={deleteTarget !== null}
+        title="Hapus Inventaris?"
+        subtitle={deleteTarget?.name}
+        onClose={() => setDeleteTarget(null)}
+        footer={
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <BigButton
+              variant="surface"
+              size="lg"
+              block
+              onClick={() => setDeleteTarget(null)}
+            >
+              Batal
+            </BigButton>
+            <BigButton variant="danger" size="lg" block onClick={handleDelete}>
+              <Trash2 size={22} strokeWidth={3} />
+              Hapus
+            </BigButton>
+          </div>
+        }
+      >
+        <p className="text-base text-ink">
+          Data <span className="font-bold">{deleteTarget?.name}</span> beserta
+          riwayat pemeriksaan dan perawatannya akan dihapus permanen.
+        </p>
+      </Sheet>
+    </PageShell>
   );
 }

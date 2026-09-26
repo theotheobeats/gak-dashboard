@@ -4,7 +4,8 @@ import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
-import { Menu } from "lucide-react";
+import { Menu, X } from "lucide-react";
+import { LoadingBlock } from "@/components/ui/Feedback";
 
 export default function DashboardLayout({
   children,
@@ -23,54 +24,56 @@ export default function DashboardLayout({
 
   if (isPending) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <div className="text-gray-500">Loading...</div>
+      <div className="flex min-h-screen items-center justify-center bg-surface">
+        <LoadingBlock label="Memuat sesi…" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-white">
-      {/* Mobile sidebar overlay */}
+    <div className="flex min-h-screen bg-surface">
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 z-40 bg-ink/50 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-100 flex flex-col h-screen shadow-sm transform transition-transform duration-300 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 border-r-2 border-edge bg-surface transform transition-transform duration-300 ease-in-out ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         <Sidebar />
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden lg:ml-64">
-        {/* Mobile header */}
-        <div className="lg:hidden flex items-center justify-between p-4 border-b border-gray-100 bg-white">
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden lg:ml-64">
+        <div className="flex items-center justify-between gap-3 border-b-2 border-edge bg-surface p-3 lg:hidden">
           <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            type="button"
+            aria-label={sidebarOpen ? "Tutup menu" : "Buka menu"}
+            onClick={() => setSidebarOpen((open) => !open)}
+            className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-edge bg-surface text-ink shadow-[0_4px_0_var(--device-edge-dark)] active:translate-y-[4px] active:shadow-none"
           >
-            <Menu size={24} className="text-gray-600" />
+            {sidebarOpen ? (
+              <X size={24} strokeWidth={3} />
+            ) : (
+              <Menu size={24} strokeWidth={3} />
+            )}
           </button>
-          <span className="font-bold text-gray-900">GAK Dashboard</span>
-          <div className="w-10" />
+          <span className="truncate text-sm font-black uppercase tracking-tight text-ink">
+            GAK Dashboard
+          </span>
+          <span className="w-12" />
         </div>
 
-        {/* Content area */}
-        <div className="flex-1 overflow-auto p-3 sm:p-4 lg:p-6 pt-2 mt-2 sm:mt-2">
+        <div className="flex-1 overflow-auto p-3 sm:p-5 lg:p-7">
           {children}
         </div>
 
-        {/* Footer */}
-        <footer className="border-t border-gray-100 bg-white py-3 px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-500">
-            <p>© {new Date().getFullYear()} Gereja Anugerah Kristus. All rights reserved.</p>
+        <footer className="border-t-2 border-edge bg-surface px-4 py-4 sm:px-6">
+          <div className="flex flex-col items-center justify-between gap-2 font-mono text-[10px] uppercase tracking-[0.15em] text-mute sm:flex-row">
+            <p>© {new Date().getFullYear()} Gereja Anugerah Kristus</p>
             <p>Developed by TITU LABS</p>
           </div>
         </footer>
@@ -78,5 +81,3 @@ export default function DashboardLayout({
     </div>
   );
 }
-
-

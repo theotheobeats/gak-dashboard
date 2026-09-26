@@ -11,9 +11,9 @@ import {
   Users,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { BigButton, bigButtonClass } from "@/components/attendance/BigButton";
-import { DeviceShell, StepCard } from "@/components/attendance/DeviceShell";
-import { DisplayPanel } from "@/components/attendance/DisplayPanel";
+import { BigButton, bigButtonClass } from "@/components/ui/BigButton";
+import { Card, PageShell } from "@/components/ui/Shell";
+import { DisplayPanel } from "@/components/ui/DisplayPanel";
 import {
   SESSIONS,
   congregationLabel,
@@ -22,7 +22,7 @@ import {
   type AttendanceRecord,
   type CongregationRecord,
 } from "@/lib/attendance";
-import { formatDayKey, formatStoredDay } from "@/lib/wib";
+import { formatDayKey, formatStoredDay, wibDayKey } from "@/lib/wib";
 
 interface TodayResponse {
   success: boolean;
@@ -107,14 +107,14 @@ export default function AttendancePage() {
 
   if (isLoading) {
     return (
-      <DeviceShell className="flex min-h-[320px] items-center justify-center">
+      <PageShell className="flex min-h-[320px] items-center justify-center">
         <Loader2 className="h-10 w-10 animate-spin text-accent" />
-      </DeviceShell>
+      </PageShell>
     );
   }
 
   return (
-    <DeviceShell>
+    <PageShell>
       <div className="space-y-5">
         <header className="px-1">
           <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-mute">
@@ -124,14 +124,7 @@ export default function AttendancePage() {
             Absensi Jemaat
           </h1>
           <p className="mt-1 font-mono text-xs uppercase tracking-[0.15em] text-mute sm:text-sm">
-            {todayKey
-              ? formatDayKey(todayKey)
-              : formatStoredDay(new Date(), {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
+            {formatDayKey(todayKey || wibDayKey())}
           </p>
         </header>
 
@@ -177,7 +170,7 @@ export default function AttendancePage() {
           ))}
         </div>
 
-        <StepCard title="Riwayat per jemaat">
+        <Card title="Riwayat per jemaat">
           <div className="relative">
             <Search
               size={22}
@@ -230,9 +223,9 @@ export default function AttendancePage() {
               Tampilkan semua ({filteredMembers.length})
             </BigButton>
           )}
-        </StepCard>
+        </Card>
 
-        <StepCard title="Catatan terakhir">
+        <Card title="Catatan terakhir">
           <div className="space-y-2">
             {recent.map((attendance) => (
               <Link
@@ -263,8 +256,8 @@ export default function AttendancePage() {
               </p>
             )}
           </div>
-        </StepCard>
+        </Card>
       </div>
-    </DeviceShell>
+    </PageShell>
   );
 }

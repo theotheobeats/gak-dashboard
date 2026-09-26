@@ -22,6 +22,10 @@
   --device-mute: #6b7280;
   --device-ok: #16a34a;
   --device-ok-dark: #15803d;
+  --device-warn: #f59e0b;
+  --device-warn-dark: #b45309;
+  --device-danger: #dc2626;
+  --device-danger-dark: #b91c1c;
 }
 
 @theme inline {
@@ -45,6 +49,10 @@
   --color-mute: var(--device-mute);
   --color-ok: var(--device-ok);
   --color-ok-dark: var(--device-ok-dark);
+  --color-warn: var(--device-warn);
+  --color-warn-dark: var(--device-warn-dark);
+  --color-danger: var(--device-danger);
+  --color-danger-dark: var(--device-danger-dark);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

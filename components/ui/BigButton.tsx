@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
-export type BigButtonVariant = "primary" | "ink" | "surface" | "quiet";
+export type BigButtonVariant = "primary" | "ink" | "surface" | "quiet" | "danger";
 export type BigButtonSize = "md" | "lg" | "xl";
 
 const VARIANT_CLASS: Record<BigButtonVariant, string> = {
@@ -10,6 +10,8 @@ const VARIANT_CLASS: Record<BigButtonVariant, string> = {
   surface:
     "bg-surface border-edge text-ink shadow-[0_6px_0_var(--device-edge-dark)] hover:bg-canvas",
   quiet: "bg-transparent border-transparent text-mute shadow-none",
+  danger:
+    "bg-[var(--device-danger)] border-[var(--device-danger-dark)] text-white shadow-[0_6px_0_var(--device-danger-dark)]",
 };
 
 const SIZE_CLASS: Record<BigButtonSize, string> = {
@@ -54,6 +56,36 @@ export function BigButton({
     <button
       type="button"
       className={bigButtonClass(variant, size, { block, className })}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+export function BigIconButton({
+  label,
+  children,
+  variant = "surface",
+  className = "",
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  label: string;
+  children: ReactNode;
+  variant?: "surface" | "danger" | "accent";
+}) {
+  const variantClass =
+    variant === "danger"
+      ? "border-danger-dark bg-danger text-white shadow-[0_4px_0_var(--device-danger-dark)]"
+      : variant === "accent"
+        ? "border-accent-dark bg-accent text-white shadow-[0_4px_0_var(--device-accent-dark)]"
+        : "border-edge bg-surface text-ink shadow-[0_4px_0_var(--device-edge-dark)]";
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-2 transition-all duration-100 active:translate-y-[4px] active:shadow-none disabled:pointer-events-none disabled:opacity-40 ${variantClass} ${className}`}
       {...props}
     >
       {children}

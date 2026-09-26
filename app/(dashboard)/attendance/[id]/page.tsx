@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Check, Loader2, Users } from "lucide-react";
 import toast from "react-hot-toast";
-import { DeviceShell } from "@/components/attendance/DeviceShell";
-import { DisplayPanel } from "@/components/attendance/DisplayPanel";
+import { PageShell } from "@/components/ui/Shell";
+import { DisplayPanel } from "@/components/ui/DisplayPanel";
 import { sessionLabel } from "@/lib/attendance";
 import { formatDayKey, storedDayKey, wibDayKey } from "@/lib/wib";
 
@@ -132,15 +132,15 @@ export default function AttendanceHistoryPage({
 
   if (isLoading) {
     return (
-      <DeviceShell className="flex min-h-[320px] items-center justify-center">
+      <PageShell className="flex min-h-[320px] items-center justify-center">
         <Loader2 className="h-10 w-10 animate-spin text-accent" />
-      </DeviceShell>
+      </PageShell>
     );
   }
 
   if (!congregation) {
     return (
-      <DeviceShell className="space-y-4 p-6 text-center">
+      <PageShell className="space-y-4 p-6 text-center">
         <p className="text-lg font-bold text-ink">Jemaat tidak ditemukan</p>
         <Link
           href="/attendance"
@@ -149,12 +149,12 @@ export default function AttendanceHistoryPage({
           <ArrowLeft size={22} strokeWidth={3} />
           Kembali
         </Link>
-      </DeviceShell>
+      </PageShell>
     );
   }
 
   return (
-    <DeviceShell>
+    <PageShell>
       <div className="space-y-5">
         <header className="flex items-center gap-3 px-1">
           <Link
@@ -279,6 +279,6 @@ export default function AttendanceHistoryPage({
           </div>
         </section>
       </div>
-    </DeviceShell>
+    </PageShell>
   );
 }

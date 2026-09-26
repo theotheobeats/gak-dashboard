@@ -1,9 +1,27 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Search, Plus, Edit, Trash2, User, Phone, MapPin, Calendar, X, ChevronLeft, ChevronRight, History } from "lucide-react";
-import toast from "react-hot-toast";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import toast from "react-hot-toast";
+import {
+  CalendarDays,
+  History,
+  MapPin,
+  Pencil,
+  Phone,
+  Plus,
+  Trash2,
+  Users,
+} from "lucide-react";
+import { PageShell, Card } from "@/components/ui/Shell";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { BigButton, BigIconButton } from "@/components/ui/BigButton";
+import { SearchInput, Field, SelectField, TextField, TextAreaField } from "@/components/ui/Input";
+import { FilterChip, StatusPill } from "@/components/ui/StatusPill";
+import { Sheet } from "@/components/ui/Sheet";
+import { EmptyState, LoadingBlock } from "@/components/ui/Feedback";
+import { Pagination } from "@/components/ui/Pagination";
+import { statusLabel, statusTone } from "@/lib/status";
 
 interface Congregation {
   id: string;
@@ -19,6 +37,39 @@ interface Congregation {
   updatedAt: string;
 }
 
+interface CongregationsResponse {
+  data: Congregation[];
+  total: number;
+  totalPages: number;
+}
+
+const TITLES = [
+  "Sdr.",
+  "Sdri.",
+  "Adik",
+  "Ev.",
+  "Pdt.",
+  "Dkn.",
+  "Pnt.",
+];
+
+const STATUS_FILTERS = [
+  { value: "all", label: "Semua" },
+  { value: "active", label: "Aktif" },
+  { value: "inactive", label: "Tidak Aktif" },
+];
+
+const PAGE_SIZES = [10, 20, 50];
+
+const EMPTY_FORM = {
+  name: "",
+  title: "",
+  birthday: "",
+  whatsappNumber: "",
+  address: "",
+  status: "active",
+};
+
 export default function CongregationsPage() {
   const [congregations, setCongregations] = useState<Congregation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,18 +78,13 @@ export default function CongregationsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingCongregation, setEditingCongregation] =
     useState<Congregation | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    title: "",
-    birthday: "",
-    whatsappNumber: "",
-    address: "",
-    status: "active",
-  });
+  const [deleteTarget, setDeleteTarget] = useState<Congregation | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formData, setFormData] = useState(EMPTY_FORM);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   const fetchCongregations = useCallback(async () => {
     try {
@@ -48,17 +94,16 @@ export default function CongregationsPage() {
       params.append("page", page.toString());
       params.append("pageSize", pageSize.toString());
 
-      const response = await fetch(
-        `/api/congregations?${params.toString()}`
-      );
+      const response = await fetch(`/api/congregations?${params.toString()}`);
       if (response.ok) {
-        const data = await response.json();
-        setCongregations(data.data);
-        setTotal(data.total);
-        setTotalPages(data.totalPages);
+        const data = (await response.json()) as CongregationsResponse;
+        setCongregations(data.data || []);
+        setTotal(data.total || 0);
+        setTotalPages(data.totalPages || 1);
       }
     } catch (error) {
       console.error("Error fetching congregations:", error);
+      toast.error("Gagal memuat data jemaat");
     } finally {
       setLoading(false);
     }
@@ -72,8 +117,22 @@ export default function CongregationsPage() {
     fetchCongregations();
   }, [fetchCongregations]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const closeForm = () => {
+    setShowModal(false);
+    setEditingCongregation(null);
+    setFormData(EMPTY_FORM);
+  };
+
+  const openCreate = () => {
+    setEditingCongregation(null);
+    setFormData(EMPTY_FORM);
+    setShowModal(true);
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setIsSaving(true);
+
     try {
       const url = editingCongregation
         ? `/api/congregations/${editingCongregation.id}`
@@ -87,18 +146,13 @@ export default function CongregationsPage() {
       });
 
       if (response.ok) {
-        setShowModal(false);
-        setEditingCongregation(null);
-        setFormData({
-          name: "",
-          title: "",
-          birthday: "",
-          whatsappNumber: "",
-          address: "",
-          status: "active",
-        });
+        toast.success(
+          editingCongregation
+            ? "Jemaat berhasil diperbarui"
+            : "Jemaat berhasil ditambahkan"
+        );
+        closeForm();
         fetchCongregations();
-        toast.success(editingCongregation ? "Jemaat berhasil diperbarui" : "Jemaat berhasil ditambahkan");
       } else {
         const error = await response.json();
         toast.error(error.error || "Gagal menyimpan jemaat");
@@ -106,6 +160,8 @@ export default function CongregationsPage() {
     } catch (error) {
       console.error("Error saving congregation:", error);
       toast.error("Gagal menyimpan jemaat");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -124,19 +180,18 @@ export default function CongregationsPage() {
     setShowModal(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this congregation?")) {
-      return;
-    }
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
 
     try {
-      const response = await fetch(`/api/congregations/${id}`, {
+      const response = await fetch(`/api/congregations/${deleteTarget.id}`, {
         method: "DELETE",
       });
 
       if (response.ok) {
-        fetchCongregations();
         toast.success("Jemaat berhasil dihapus");
+        setDeleteTarget(null);
+        fetchCongregations();
       } else {
         toast.error("Gagal menghapus jemaat");
       }
@@ -151,406 +206,304 @@ export default function CongregationsPage() {
     const today = new Date();
     const birthDate = new Date(birthday);
     let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
     return age;
   };
 
   return (
-    <div className="space-y-6 sm:space-y-8">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-        <div className="flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
-            Manajemen Jemaat
-          </h1>
-          <p className="text-gray-500 text-xs sm:text-sm">
-            Kelola anggota jemaat dan informasi mereka
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            setEditingCongregation(null);
-            setFormData({
-              name: "",
-              title: "",
-              birthday: "",
-              whatsappNumber: "",
-              address: "",
-              status: "active",
-            });
-            setShowModal(true);
-          }}
-          className="px-3 sm:px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors shadow-lg hover:shadow-primary/20 flex items-center gap-2 w-full sm:w-auto justify-center text-sm"
-        >
-          <Plus size={18} />
-          <span className="hidden sm:inline">Tambah Jemaat</span>
-          <span className="sm:hidden">Tambah</span>
-        </button>
-      </div>
+    <PageShell width="wide">
+      <div className="space-y-5">
+        <PageHeader
+          eyebrow="Data jemaat"
+          title="Manajemen Jemaat"
+          subtitle={`${total} jemaat terdaftar`}
+          action={
+            <BigButton onClick={openCreate} block>
+              <Plus size={24} strokeWidth={3} />
+              Tambah Jemaat
+            </BigButton>
+          }
+        />
 
-      <div className="bg-white rounded-3xl p-3 sm:p-4 shadow-sm border border-gray-100">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Cari jemaat..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 text-gray-900 placeholder-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
-            />
+        <Card title="Cari & filter">
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Cari nama jemaat, gelar, atau WhatsApp…"
+          />
+          <div className="mt-4 flex flex-wrap gap-2">
+            {STATUS_FILTERS.map((filter) => (
+              <FilterChip
+                key={filter.value}
+                label={filter.label}
+                active={statusFilter === filter.value}
+                onClick={() => setStatusFilter(filter.value)}
+              />
+            ))}
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 rounded-lg border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 w-full sm:w-auto text-sm"
-          >
-            <option value="all">Semua Status</option>
-            <option value="active">Aktif</option>
-            <option value="inactive">Tidak Aktif</option>
-          </select>
-        </div>
+        </Card>
 
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="text-gray-500 text-sm">Memuat...</div>
-          </div>
+          <Card>
+            <LoadingBlock label="Memuat jemaat…" />
+          </Card>
         ) : congregations.length === 0 ? (
-          <div className="text-center py-8">
-            <User className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-            <p className="text-gray-500 text-sm">
-              Tidak ada jemaat ditemukan. Tambahkan jemaat pertama Anda untuk memulai.
-            </p>
-          </div>
+          <Card>
+            <EmptyState
+              icon={<Users size={30} />}
+              title="Belum ada jemaat"
+              description="Tambahkan jemaat pertama untuk memulai"
+              action={
+                <BigButton onClick={openCreate} className="mt-2">
+                  <Plus size={22} strokeWidth={3} />
+                  Tambah Jemaat
+                </BigButton>
+              }
+            />
+          </Card>
         ) : (
-          <>
-            <div className="overflow-x-auto -mx-3 sm:mx-0">
-              <table className="w-full min-w-[500px]">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-3 font-semibold text-gray-700 text-xs">
-                      Nama
-                    </th>
-                    <th className="text-left py-3 px-3 font-semibold text-gray-700 text-xs">
-                      Usia
-                    </th>
-                    <th className="text-left py-3 px-3 font-semibold text-gray-700 text-xs">
-                      WhatsApp
-                    </th>
-                    <th className="text-left py-3 px-3 font-semibold text-gray-700 text-xs">
-                      Alamat
-                    </th>
-                    <th className="text-left py-3 px-3 font-semibold text-gray-700 text-xs">
-                      Status
-                    </th>
-                    <th className="text-right py-3 px-3 font-semibold text-gray-700 text-xs">
-                      Aksi
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {congregations.map((congregation) => (
-                    <tr
-                      key={congregation.id}
-                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="py-3 px-3">
-                        <div>
-                          <div className="font-medium text-gray-900 text-sm">
-                            {congregation.name}
-                          </div>
-                          {congregation.title && (
-                            <div className="text-xs text-gray-500">
-                              {congregation.title}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-3 text-gray-600 text-sm">
-                        {congregation.birthday ? (
-                          <div className="flex items-center gap-1.5">
-                            <Calendar size={14} className="text-gray-400" />
-                            {calculateAge(congregation.birthday)} tahun
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">-</span>
+          <div className="space-y-3">
+            {congregations.map((congregation) => {
+              const age = calculateAge(congregation.birthday);
+
+              return (
+                <div
+                  key={congregation.id}
+                  className="rounded-[24px] border-2 border-edge bg-surface p-4 shadow-[0_4px_0_var(--device-edge-dark)]"
+                >
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-base font-bold text-ink sm:text-lg">
+                          {congregation.title
+                            ? `${congregation.title} ${congregation.name}`
+                            : congregation.name}
+                        </p>
+                        <StatusPill tone={statusTone(congregation.status)}>
+                          {statusLabel(congregation.status)}
+                        </StatusPill>
+                      </div>
+
+                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[11px] uppercase tracking-[0.12em] text-mute">
+                        {age !== null && (
+                          <span className="inline-flex items-center gap-1.5">
+                            <CalendarDays size={14} />
+                            {age} tahun
+                          </span>
                         )}
-                      </td>
-                      <td className="py-3 px-3">
-                        {congregation.whatsappNumber ? (
+                        {congregation.whatsappNumber && (
                           <a
                             href={`https://wa.me/${congregation.whatsappNumber}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 text-primary hover:text-primary-dark font-medium text-sm"
+                            className="inline-flex items-center gap-1.5 text-accent-dark"
                           >
                             <Phone size={14} />
                             {congregation.whatsappNumber}
                           </a>
-                        ) : (
-                          <span className="text-gray-400">-</span>
                         )}
-                      </td>
-                      <td className="py-3 px-3">
-                        {congregation.address ? (
-                          <div className="flex items-start gap-1.5 text-gray-600 max-w-xs text-sm">
-                            <MapPin size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                            <span className="line-clamp-2">{congregation.address}</span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">-</span>
+                        {congregation.address && (
+                          <span className="inline-flex max-w-full items-center gap-1.5">
+                            <MapPin size={14} className="shrink-0" />
+                            <span className="truncate normal-case">
+                              {congregation.address}
+                            </span>
+                          </span>
                         )}
-                      </td>
-                      <td className="py-3 px-3">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                            congregation.status === "active"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-red-100 text-red-700"
-                          }`}
-                        >
-                          {congregation.status === "active" ? "Aktif" : "Tidak Aktif"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3">
-                        <div className="flex items-center justify-end gap-1">
-                          <Link
-                            href={`/attendance/${congregation.id}`}
-                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-primary"
-                            title="Riwayat Kehadiran"
-                          >
-                            <History size={16} />
-                          </Link>
-                          <button
-                            onClick={() => handleEdit(congregation)}
-                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-gray-900"
-                            title="Edit"
-                          >
-                            <Edit size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(congregation.id)}
-                            className="p-1.5 hover:bg-red-50 rounded-lg transition-colors text-red-600 hover:text-red-700"
-                            title="Delete"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    </div>
 
-            {totalPages > 1 && (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4 pt-4 border-t border-gray-200">
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <span>Menampilkan</span>
-                  <select
-                    value={pageSize}
-                    onChange={(e) => {
-                      setPageSize(parseInt(e.target.value));
-                      setPage(1);
-                    }}
-                    className="px-2 py-1 rounded-md border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-xs"
-                  >
-                    <option value="10">10</option>
-                    <option value="20">20</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                  </select>
-                  <span>per halaman</span>
-                  <span className="text-gray-400">|</span>
-                  <span>
-                    {Math.min((page - 1) * pageSize + 1, total)} - {Math.min(page * pageSize, total)} dari {total}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="p-1.5 rounded-md border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronLeft size={18} className="text-gray-600" />
-                  </button>
-
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (page <= 3) {
-                        pageNum = i + 1;
-                      } else if (page >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = page - 2 + i;
-                      }
-
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setPage(pageNum)}
-                          className={`w-8 h-8 rounded-md font-medium transition-colors text-xs ${
-                            page === pageNum
-                              ? "bg-primary text-white"
-                              : "border border-gray-200 hover:bg-gray-50 text-gray-700"
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
+                    <div className="flex shrink-0 gap-2">
+                      <Link
+                        href={`/attendance/${congregation.id}`}
+                        aria-label={`Riwayat ${congregation.name}`}
+                        className="flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-edge bg-surface text-ink shadow-[0_4px_0_var(--device-edge-dark)] transition-all duration-100 active:translate-y-[4px] active:shadow-none"
+                      >
+                        <History size={24} strokeWidth={2.5} />
+                      </Link>
+                      <BigIconButton
+                        label={`Ubah ${congregation.name}`}
+                        onClick={() => handleEdit(congregation)}
+                      >
+                        <Pencil size={24} strokeWidth={2.5} />
+                      </BigIconButton>
+                      <BigIconButton
+                        label={`Hapus ${congregation.name}`}
+                        variant="danger"
+                        onClick={() => setDeleteTarget(congregation)}
+                      >
+                        <Trash2 size={24} strokeWidth={2.5} />
+                      </BigIconButton>
+                    </div>
                   </div>
-
-                  <button
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="p-1.5 rounded-md border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronRight size={18} className="text-gray-600" />
-                  </button>
                 </div>
-              </div>
-            )}
-          </>
+              );
+            })}
+          </div>
         )}
+
+        <Card>
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            label="jemaat"
+            onPageChange={setPage}
+          />
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t-2 border-edge pt-4">
+            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-mute">
+              Per halaman
+            </span>
+            {PAGE_SIZES.map((size) => (
+              <FilterChip
+                key={size}
+                label={size.toString()}
+                active={pageSize === size}
+                onClick={() => {
+                  setPageSize(size);
+                  setPage(1);
+                }}
+              />
+            ))}
+          </div>
+        </Card>
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-md bg-white rounded-2xl p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-lg font-bold text-gray-900">
-                {editingCongregation ? "Edit Jemaat" : "Tambah Jemaat"}
-              </h2>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X size={18} className="text-gray-500" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Nama *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Gelar
-                </label>
-                <select
-                  value={formData.title}
-                  onChange={(e) =>
-                    setFormData({ ...formData, title: e.target.value })
-                  }
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
-                >
-                  <option value="">Tidak ada</option>
-                  <option value="Sdr.">Sdr.</option>
-                  <option value="Sdri.">Sdri.</option>
-                  <option value="Adik">Adik</option>
-                  <option value="Ev.">Ev.</option>
-                  <option value="Pdt.">Pdt.</option>
-                  <option value="Dkn.">Dkn.</option>
-                  <option value="Pnt.">Pnt.</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Tanggal Lahir
-                </label>
-                <input
-                  type="date"
-                  value={formData.birthday}
-                  onChange={(e) =>
-                    setFormData({ ...formData, birthday: e.target.value })
-                  }
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Nomor WhatsApp
-                </label>
-                <input
-                  type="text"
-                  value={formData.whatsappNumber}
-                  onChange={(e) =>
-                    setFormData({ ...formData, whatsappNumber: e.target.value })
-                  }
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Alamat
-                </label>
-                <textarea
-                  value={formData.address}
-                  onChange={(e) =>
-                    setFormData({ ...formData, address: e.target.value })
-                  }
-                  rows={3}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Status
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) =>
-                    setFormData({ ...formData, status: e.target.value })
-                  }
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
-                >
-                  <option value="active">Aktif</option>
-                  <option value="inactive">Tidak Aktif</option>
-                </select>
-              </div>
-
-              <div className="flex gap-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors font-medium text-sm"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-3 py-2 rounded-lg bg-primary hover:bg-primary-dark text-white transition-colors font-medium shadow-lg hover:shadow-primary/20 text-sm"
-                >
-                  {editingCongregation ? "Perbarui" : "Buat"}
-                </button>
-              </div>
-            </form>
+      <Sheet
+        open={showModal}
+        title={editingCongregation ? "Ubah Jemaat" : "Tambah Jemaat"}
+        subtitle={editingCongregation ? editingCongregation.name : "Data baru"}
+        onClose={closeForm}
+        footer={
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <BigButton variant="surface" size="lg" block onClick={closeForm}>
+              Batal
+            </BigButton>
+            <BigButton
+              type="submit"
+              form="congregation-form"
+              size="lg"
+              block
+              disabled={isSaving || !formData.name.trim()}
+            >
+              {isSaving
+                ? "Menyimpan…"
+                : editingCongregation
+                  ? "Perbarui"
+                  : "Simpan"}
+            </BigButton>
           </div>
-        </div>
-      )}
-    </div>
+        }
+      >
+        <form
+          id="congregation-form"
+          onSubmit={handleSubmit}
+          className="space-y-4"
+        >
+          <Field label="Nama">
+            <TextField
+              required
+              value={formData.name}
+              onChange={(event) =>
+                setFormData({ ...formData, name: event.target.value })
+              }
+              placeholder="Nama lengkap jemaat"
+            />
+          </Field>
+
+          <Field label="Gelar">
+            <SelectField
+              value={formData.title}
+              onChange={(event) =>
+                setFormData({ ...formData, title: event.target.value })
+              }
+            >
+              <option value="">Tidak ada</option>
+              {TITLES.map((title) => (
+                <option key={title} value={title}>
+                  {title}
+                </option>
+              ))}
+            </SelectField>
+          </Field>
+
+          <Field label="Tanggal lahir">
+            <TextField
+              type="date"
+              value={formData.birthday}
+              onChange={(event) =>
+                setFormData({ ...formData, birthday: event.target.value })
+              }
+            />
+          </Field>
+
+          <Field label="Nomor WhatsApp">
+            <TextField
+              inputMode="tel"
+              value={formData.whatsappNumber}
+              onChange={(event) =>
+                setFormData({ ...formData, whatsappNumber: event.target.value })
+              }
+              placeholder="08xxxxxxxxxx"
+            />
+          </Field>
+
+          <Field label="Alamat">
+            <TextAreaField
+              rows={3}
+              value={formData.address}
+              onChange={(event) =>
+                setFormData({ ...formData, address: event.target.value })
+              }
+              placeholder="Alamat tempat tinggal"
+            />
+          </Field>
+
+          <Field label="Status">
+            <SelectField
+              value={formData.status}
+              onChange={(event) =>
+                setFormData({ ...formData, status: event.target.value })
+              }
+            >
+              <option value="active">Aktif</option>
+              <option value="inactive">Tidak Aktif</option>
+            </SelectField>
+          </Field>
+        </form>
+      </Sheet>
+
+      <Sheet
+        open={deleteTarget !== null}
+        title="Hapus Jemaat?"
+        subtitle={deleteTarget?.name}
+        onClose={() => setDeleteTarget(null)}
+        footer={
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <BigButton
+              variant="surface"
+              size="lg"
+              block
+              onClick={() => setDeleteTarget(null)}
+            >
+              Batal
+            </BigButton>
+            <BigButton variant="danger" size="lg" block onClick={handleDelete}>
+              <Trash2 size={22} strokeWidth={3} />
+              Hapus
+            </BigButton>
+          </div>
+        }
+      >
+        <p className="text-base text-ink">
+          Data jemaat{" "}
+          <span className="font-bold">{deleteTarget?.name}</span> akan dihapus
+          permanen, termasuk riwayat kehadirannya.
+        </p>
+      </Sheet>
+    </PageShell>
   );
 }

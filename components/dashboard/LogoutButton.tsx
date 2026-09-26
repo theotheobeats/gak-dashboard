@@ -18,12 +18,11 @@ export function LogoutButton() {
 
   return (
     <button
+      type="button"
       onClick={handleLogout}
-      className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group text-gray-500 hover:bg-gray-50 hover:text-gray-900 w-full"
+      className="flex min-h-12 w-full items-center gap-3 rounded-2xl border-2 border-transparent px-3 text-sm font-semibold text-mute transition-all duration-100 hover:bg-canvas hover:text-ink"
     >
-      <span className="text-gray-400 group-hover:text-gray-600">
-        <LogOut size={20} />
-      </span>
+      <LogOut size={20} />
       <span className="flex-1 text-left">Keluar</span>
     </button>
   );

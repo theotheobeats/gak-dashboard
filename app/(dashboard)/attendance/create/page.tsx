@@ -13,9 +13,9 @@ import {
   X,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { BigButton } from "@/components/attendance/BigButton";
-import { DeviceShell, StepCard } from "@/components/attendance/DeviceShell";
-import { DisplayPanel } from "@/components/attendance/DisplayPanel";
+import { BigButton } from "@/components/ui/BigButton";
+import { Card, PageShell } from "@/components/ui/Shell";
+import { DisplayPanel } from "@/components/ui/DisplayPanel";
 import {
   SESSIONS,
   attendanceKey,
@@ -25,7 +25,7 @@ import {
   type AttendanceRecord,
   type CongregationRecord,
 } from "@/lib/attendance";
-import { formatStoredDay } from "@/lib/wib";
+import { formatDayKey, wibDayKey } from "@/lib/wib";
 
 interface TodayResponse {
   success: boolean;
@@ -54,9 +54,9 @@ export default function CreateAttendancePage() {
   return (
     <Suspense
       fallback={
-        <DeviceShell className="flex min-h-[320px] items-center justify-center">
+        <PageShell className="flex min-h-[320px] items-center justify-center">
           <Loader2 className="h-10 w-10 animate-spin text-accent" />
-        </DeviceShell>
+        </PageShell>
       }
     >
       <CreateAttendanceForm />
@@ -224,14 +224,14 @@ function CreateAttendanceForm() {
 
   if (isLoading) {
     return (
-      <DeviceShell className="flex min-h-[320px] items-center justify-center">
+      <PageShell className="flex min-h-[320px] items-center justify-center">
         <Loader2 className="h-10 w-10 animate-spin text-accent" />
-      </DeviceShell>
+      </PageShell>
     );
   }
 
   return (
-    <DeviceShell>
+    <PageShell>
       <form onSubmit={handleSubmit} className="space-y-5">
         <header className="flex items-center gap-3 px-1">
           <Link
@@ -246,7 +246,7 @@ function CreateAttendanceForm() {
               Isi Absensi
             </h1>
             <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-mute sm:text-xs">
-              {formatStoredDay(new Date(), {
+              {formatDayKey(wibDayKey(), {
                 weekday: "long",
                 day: "numeric",
                 month: "long",
@@ -264,7 +264,7 @@ function CreateAttendanceForm() {
           hint="tekan ✓ untuk simpan"
         />
 
-        <StepCard step={1} title="Pilih kebaktian">
+        <Card step={1} title="Pilih kebaktian">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {SESSIONS.map((option) => {
               const isActive = session === option;
@@ -285,9 +285,9 @@ function CreateAttendanceForm() {
               );
             })}
           </div>
-        </StepCard>
+        </Card>
 
-        <StepCard step={2} title="Tandai yang hadir">
+        <Card step={2} title="Tandai yang hadir">
           {!session ? (
             <p className="rounded-2xl border-2 border-dashed border-edge px-4 py-8 text-center text-base font-semibold text-mute">
               Pilih kebaktian pada langkah 1 dulu
@@ -478,7 +478,7 @@ function CreateAttendanceForm() {
               </div>
             </>
           )}
-        </StepCard>
+        </Card>
 
         <div className="sticky bottom-0 z-20 -mx-3 -mb-3 rounded-b-[30px] border-t-2 border-edge bg-canvas/95 px-3 pt-4 pb-3 backdrop-blur sm:-mx-5 sm:-mb-5 sm:px-5 sm:pb-5">
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -508,6 +508,6 @@ function CreateAttendanceForm() {
           </div>
         </div>
       </form>
-    </DeviceShell>
+    </PageShell>
   );
 }

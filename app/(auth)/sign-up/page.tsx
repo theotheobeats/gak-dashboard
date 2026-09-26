@@ -1,46 +1,56 @@
 "use client";
 
-import { Hexagon, Lock } from "lucide-react";
 import Link from "next/link";
+import { Hexagon, Lock } from "lucide-react";
+import { PageShell } from "@/components/ui/Shell";
+import { bigButtonClass } from "@/components/ui/BigButton";
 
 export default function SignUpPage() {
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4">
+    <main className="flex min-h-screen items-center justify-center bg-canvas p-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <Hexagon className="w-8 h-8 text-primary fill-primary/20" />
-          <span className="text-xl font-bold text-gray-900">GAK</span>
+        <div className="mb-5 flex items-center justify-center gap-3">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-ink bg-ink">
+            <Hexagon className="h-6 w-6 text-screen-ink" strokeWidth={2.5} />
+          </span>
+          <span className="text-xl font-black uppercase tracking-tight text-ink">
+            GAK Palembang
+          </span>
         </div>
 
-        {/* Card */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Lock className="w-8 h-8 text-gray-400" />
+        <PageShell>
+          <div className="space-y-5">
+            <div className="text-center">
+              <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-edge bg-canvas">
+                <Lock className="h-7 w-7 text-mute" strokeWidth={2.5} />
+              </span>
+              <p className="font-mono text-[11px] uppercase tracking-[0.3em] text-mute">
+                Pendaftaran
+              </p>
+              <h1 className="mt-2 text-xl font-black uppercase tracking-tight text-ink">
+                Pendaftaran Ditutup
+              </h1>
+              <p className="mt-1 text-sm text-mute">
+                Hubungi Dkn. Theo untuk request akun dan akses ke dashboard
+              </p>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Pendaftaran Ditutup
-            </h1>
-            <p className="text-gray-500 text-sm">
-              Hubungi Dkn. Theo untuk request akun dan akses ke dashboard
-            </p>
-          </div>
 
-          <div className="bg-gray-50 rounded-xl p-4 mb-6">
-            <p className="text-sm text-gray-600 text-center">
-              Untuk keamanan dan pengelolaan yang lebih baik, pembuatan akun baru dilakukan secara manual oleh administrator.
-            </p>
-          </div>
+            <div className="rounded-2xl border-2 border-edge bg-canvas p-4">
+              <p className="text-sm text-mute">
+                Untuk keamanan dan pengelolaan yang lebih baik, pembuatan akun
+                baru dilakukan secara manual oleh administrator.
+              </p>
+            </div>
 
-          <Link
-            href="/sign-in"
-            className="block w-full px-4 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors shadow-lg hover:shadow-primary/20 text-center text-sm"
-          >
-            Kembali ke Halaman Masuk
-          </Link>
-        </div>
+            <Link
+              href="/sign-in"
+              className={bigButtonClass("primary", "lg", { block: true })}
+            >
+              Kembali ke Halaman Masuk
+            </Link>
+          </div>
+        </PageShell>
       </div>
-    </div>
+    </main>
   );
 }

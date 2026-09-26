@@ -3,6 +3,7 @@
 import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { LoadingBlock } from "@/components/ui/Feedback";
 
 export default function AuthLayout({
   children,
@@ -20,8 +21,8 @@ export default function AuthLayout({
 
   if (isPending) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-zinc-600 dark:text-zinc-400">Loading...</div>
+      <div className="flex min-h-screen items-center justify-center bg-canvas">
+        <LoadingBlock label="Memuat sesi…" />
       </div>
     );
   }

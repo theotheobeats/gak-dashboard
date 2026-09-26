@@ -1,11 +1,29 @@
 "use client";
 
-import { StatCard } from "@/components/dashboard/StatCard";
-import { AttendanceChart } from "@/components/dashboard/AttendanceChart";
-import { Users, Calendar, CheckSquare, Loader2, ImageIcon } from "lucide-react";
-import { useSession } from "@/lib/auth-client";
-import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { useSession } from "@/lib/auth-client";
+import {
+  CalendarCheck,
+  CalendarDays,
+  ChevronRight,
+  ImageIcon,
+  Users,
+  UserCheck,
+} from "lucide-react";
+import { PageShell, Card } from "@/components/ui/Shell";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { DisplayPanel, StatPanel } from "@/components/ui/DisplayPanel";
+import { ListRow } from "@/components/ui/ListRow";
+import { EmptyState, LoadingBlock } from "@/components/ui/Feedback";
+import { AttendanceChart } from "@/components/dashboard/AttendanceChart";
+import { sessionLabel } from "@/lib/attendance";
+import {
+  formatDayKey,
+  formatStoredClock,
+  formatStoredDay,
+  wibDayKey,
+} from "@/lib/wib";
 
 interface ChartPoint {
   label: string;
@@ -18,6 +36,54 @@ interface AttendanceChartData {
   monthly: ChartPoint[];
 }
 
+interface TodayResponse {
+  success: boolean;
+  counts: Record<string, number>;
+  total: number;
+  date: string;
+}
+
+interface CongregationsResponse {
+  data: { status: string }[];
+  total: number;
+}
+
+interface AttendancesResponse {
+  data: {
+    id: string;
+    date: string;
+    congregation: { name: string };
+    sermonSession: { name: string };
+  }[];
+}
+
+const QUICK_ACTIONS = [
+  {
+    href: "/attendance/create",
+    label: "Catat Kehadiran",
+    hint: "Tandai jemaat yang hadir",
+    icon: CalendarCheck,
+  },
+  {
+    href: "/attendance",
+    label: "Absensi & Riwayat",
+    hint: "Rekap kehadiran jemaat",
+    icon: CalendarDays,
+  },
+  {
+    href: "/congregations",
+    label: "Kelola Jemaat",
+    hint: "Lihat dan ubah data anggota",
+    icon: Users,
+  },
+  {
+    href: "/media",
+    label: "Galeri Media",
+    hint: "Kelola album dan foto",
+    icon: ImageIcon,
+  },
+];
+
 export default function DashboardPage() {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(true);
@@ -27,12 +93,19 @@ export default function DashboardPage() {
     totalCongregations: 0,
     activeCongregations: 0,
     todayAttendance: 0,
-    recentActivities: [] as Array<{ id: string; type: string; message: string; time: string }>,
+    sessionCounts: {} as Record<string, number>,
+    todayKey: "",
+    recentActivities: [] as Array<{
+      id: string;
+      message: string;
+      date: string;
+      time: string;
+    }>,
   });
 
   const averageWeekly = useMemo(() => {
     if (!chartData?.weekly?.length) return "0";
-    const total = chartData.weekly.reduce((sum, w) => sum + w.total, 0);
+    const total = chartData.weekly.reduce((sum, week) => sum + week.total, 0);
     return Math.round(total / chartData.weekly.length).toString();
   }, [chartData]);
 
@@ -41,39 +114,37 @@ export default function DashboardPage() {
 
     const fetchDashboardData = async () => {
       try {
-        const [congregationsRes, attendancesRes] = await Promise.all([
+        const [congregationsRes, todayRes, attendancesRes] = await Promise.all([
           fetch("/api/congregations?pageSize=1000", { credentials: "include" }),
-          fetch("/api/attendances/sunday", { credentials: "include" }),
+          fetch("/api/attendances/today", { credentials: "include" }),
+          fetch("/api/attendances", { credentials: "include" }),
         ]);
 
-        if (!congregationsRes.ok || !attendancesRes.ok) {
-          throw new Error("Failed to fetch dashboard data");
-        }
-
-        const congregationsData = await congregationsRes.json();
-        const attendancesData = await attendancesRes.json();
-
-        const totalCongregations = congregationsData.total || 0;
-        const activeCongregations = congregationsData.data?.filter((c: { status: string }) => c.status === "active").length || 0;
-        const todayAttendance = attendancesData.data?.length || 0;
-
-        const allAttendancesRes = await fetch("/api/attendances", { credentials: "include" });
-        const allAttendancesData = allAttendancesRes.ok ? await allAttendancesRes.json() : { data: [] };
-
-        const recentActivities = (allAttendancesData.data || [])
-          .slice(0, 5)
-          .map((a: { id: string; date: string; congregation: { name: string }; sermonSession: { name: string } }) => ({
-            id: a.id,
-            type: "attendance",
-            message: `${a.congregation.name} hadir di ${a.sermonSession.name}`,
-            time: new Date(a.date).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
-          }));
+        const congregationsData =
+          (await congregationsRes.json()) as CongregationsResponse;
+        const todayData = (await todayRes.json()) as TodayResponse;
+        const attendancesData =
+          (await attendancesRes.json()) as AttendancesResponse;
 
         setStats({
-          totalCongregations,
-          activeCongregations,
-          todayAttendance,
-          recentActivities,
+          totalCongregations: congregationsData.total || 0,
+          activeCongregations:
+            congregationsData.data?.filter(
+              (congregation) => congregation.status === "active"
+            ).length || 0,
+          todayAttendance: todayData.total || 0,
+          sessionCounts: todayData.counts || {},
+          todayKey: todayData.date || wibDayKey(),
+          recentActivities: (attendancesData.data || [])
+            .slice(0, 6)
+            .map((attendance) => ({
+              id: attendance.id,
+              message: `${attendance.congregation.name} · ${sessionLabel(
+                attendance.sermonSession.name
+              )}`,
+              date: attendance.date,
+              time: formatStoredClock(attendance.date),
+            })),
         });
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -84,7 +155,9 @@ export default function DashboardPage() {
 
     const fetchChartData = async () => {
       try {
-        const res = await fetch("/api/attendances/weekly", { credentials: "include" });
+        const res = await fetch("/api/attendances/weekly", {
+          credentials: "include",
+        });
         if (res.ok) {
           const json = await res.json();
           setChartData(json.data || null);
@@ -102,131 +175,121 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <PageShell width="wide">
+        <LoadingBlock label="Memuat dashboard…" />
+      </PageShell>
     );
   }
 
   return (
-    <div className="space-y-6 sm:space-y-8">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-        <div className="flex-1">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
-            {session?.user?.name ? `Halo, ${session.user.name}` : "Halo"}
-          </h1>
-          <p className="text-gray-500 text-xs sm:text-sm">
-            Selamat datang di Dashboard GAK. Kelola jemaat dan kegiatan Anda.
-          </p>
-        </div>
-      </div>
+    <PageShell width="wide">
+      <div className="space-y-5">
+        <PageHeader
+          eyebrow="Gereja Anugerah Kristus"
+          title={session?.user?.name ? `Halo, ${session.user.name}` : "Halo"}
+          subtitle={formatDayKey(wibDayKey(), {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
+        />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
-        <StatCard
-          title="Total Jemaat"
-          value={stats.totalCongregations.toString()}
-          trend="up"
-          trendLabel="Anggota terdaftar"
-          variant="primary"
-        />
-        <StatCard
-          title="Anggota Aktif"
-          value={stats.activeCongregations.toString()}
-          trend="up"
-          trendLabel="Status aktif"
-        />
-        <StatCard
-          title="Rata-rata Kehadiran Mingguan"
-          value={averageWeekly}
-          trend="up"
-          trendLabel="Per minggu"
-        />
-        <StatCard
-          title="Kehadiran Minggu Ini"
-          value={stats.todayAttendance.toString()}
-          trend="up"
-          trendLabel="Total kehadiran"
-        />
-      </div>
-
-      <AttendanceChart data={chartData} loading={chartLoading} />
-
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-        <div className="min-h-[300px] bg-white rounded-3xl p-3 sm:p-4 shadow-sm border border-gray-100">
-          <h3 className="text-base font-semibold text-gray-900 mb-3">Aksi Cepat</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <a
-              href="/congregations"
-              className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
-            >
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Users className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900 text-sm">Kelola Jemaat</h4>
-                <p className="text-xs text-gray-500">Lihat dan edit anggota</p>
-              </div>
-            </a>
-            <Link
-              href="/attendance/create"
-              className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
-            >
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <CheckSquare className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900 text-sm">Catat Kehadiran</h4>
-                <p className="text-xs text-gray-500">Lacak kehadiran anggota</p>
-              </div>
-            </Link>
-            <Link
-              href="/attendance"
-              className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
-            >
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Calendar className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900 text-sm">Riwayat Absensi</h4>
-                <p className="text-xs text-gray-500">Lihat data kehadiran</p>
-              </div>
-            </Link>
-            <a
-              href="/media"
-              className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
-            >
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <ImageIcon className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900 text-sm">Galeri Media</h4>
-                <p className="text-xs text-gray-500">Kelola foto dan album</p>
-              </div>
-            </a>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="lg:col-span-1">
+            <DisplayPanel
+              label="Hadir hari ini"
+              value={stats.todayAttendance}
+              unit="orang"
+              sub={Object.entries(stats.sessionCounts)
+                .map(([name, count]) => `${sessionLabel(name)}: ${count}`)
+                .join(" · ") || "Belum ada catatan hari ini"}
+              hint="tekan catat kehadiran"
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3 lg:col-span-2">
+            <StatPanel
+              label="Total Jemaat"
+              value={stats.totalCongregations}
+              unit="orang"
+              hint="Terdaftar"
+              icon={<Users size={20} className="text-mute" />}
+            />
+            <StatPanel
+              label="Anggota Aktif"
+              value={stats.activeCongregations}
+              unit="orang"
+              hint="Status aktif"
+              icon={<UserCheck size={20} className="text-mute" />}
+            />
+            <StatPanel
+              label="Rata-rata Mingguan"
+              value={averageWeekly}
+              unit="hadir"
+              hint={`Total catatan ${chartData?.year || ""}`}
+              icon={<CalendarCheck size={20} className="text-mute" />}
+            />
           </div>
         </div>
 
-        <div className="min-h-[300px] bg-white rounded-3xl p-3 sm:p-4 shadow-sm border border-gray-100">
-          <h3 className="text-base font-semibold text-gray-900 mb-3">Aktivitas Terbaru</h3>
-          <div className="space-y-3">
+        <AttendanceChart data={chartData} loading={chartLoading} />
+
+        <div className="grid gap-4 xl:grid-cols-2">
+          <Card title="Aksi cepat">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {QUICK_ACTIONS.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <Link
+                    key={action.href}
+                    href={action.href}
+                    className="flex min-h-20 items-center gap-3 rounded-2xl border-2 border-edge bg-surface px-4 py-3 shadow-[0_4px_0_var(--device-edge-dark)] transition-all duration-100 active:translate-y-[4px] active:shadow-none"
+                  >
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+                      <Icon size={24} strokeWidth={2.5} />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-base font-bold text-ink">
+                        {action.label}
+                      </span>
+                      <span className="block font-mono text-[10px] uppercase tracking-[0.15em] text-mute">
+                        {action.hint}
+                      </span>
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </Card>
+
+          <Card title="Aktivitas terbaru">
             {stats.recentActivities.length > 0 ? (
-              stats.recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3">
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full mt-1.5 flex-shrink-0"></div>
-                  <div>
-                    <p className="text-xs text-gray-900">{activity.message}</p>
-                    <p className="text-[10px] text-gray-500">{activity.time}</p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-xs text-gray-500">Belum ada aktivitas terbaru</p>
+              <div className="space-y-2">
+                {stats.recentActivities.map((activity) => (
+                  <ListRow
+                    key={activity.id}
+                    title={activity.message}
+                    meta={`${formatStoredDay(activity.date, {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                    })} · ${activity.time}`}
+                    leading={<CalendarCheck size={20} className="text-mute" />}
+                    trailing={<ChevronRight size={20} className="text-mute" />}
+                    href="/attendance"
+                  />
+                ))}
               </div>
+            ) : (
+              <EmptyState
+                icon={<CalendarDays size={28} />}
+                title="Belum ada aktivitas"
+                description="Absensi yang dicatat akan muncul di sini"
+              />
             )}
-          </div>
+          </Card>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }
