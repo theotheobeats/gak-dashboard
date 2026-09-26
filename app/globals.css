@@ -7,17 +7,21 @@
   --primary-dark: #1d4ed8; /* blue-700 */
   --secondary: #e2e8f0; /* slate-200 */
 
-  --device-canvas: #e9e5db;
-  --device-surface: #f8f5ee;
-  --device-edge: #d2ccc0;
-  --device-ink: #16181a;
-  --device-accent: #e0502a;
-  --device-accent-dark: #b83c19;
-  --device-screen: #101214;
-  --device-screen-ink: #f1ead9;
-  --device-mute: #6b665c;
-  --device-ok: #35704c;
-  --device-ok-dark: #1f4a33;
+  --device-canvas: #f9fafb;
+  --device-surface: #ffffff;
+  --device-edge: #e5e7eb;
+  --device-edge-dark: #d1d5db;
+  --device-ink: #111827;
+  --device-ink-soft: #1f2937;
+  --device-ink-dark: #030712;
+  --device-accent: #3b82f6;
+  --device-accent-soft: #2563eb;
+  --device-accent-dark: #1d4ed8;
+  --device-screen: #111827;
+  --device-screen-ink: #f9fafb;
+  --device-mute: #6b7280;
+  --device-ok: #16a34a;
+  --device-ok-dark: #15803d;
 }
 
 @theme inline {
@@ -29,8 +33,12 @@
   --color-canvas: var(--device-canvas);
   --color-surface: var(--device-surface);
   --color-edge: var(--device-edge);
+  --color-edge-dark: var(--device-edge-dark);
   --color-ink: var(--device-ink);
+  --color-ink-soft: var(--device-ink-soft);
+  --color-ink-dark: var(--device-ink-dark);
   --color-accent: var(--device-accent);
+  --color-accent-soft: var(--device-accent-soft);
   --color-accent-dark: var(--device-accent-dark);
   --color-screen: var(--device-screen);
   --color-screen-ink: var(--device-screen-ink);

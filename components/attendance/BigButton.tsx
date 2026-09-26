@@ -5,10 +5,10 @@ export type BigButtonSize = "md" | "lg" | "xl";
 
 const VARIANT_CLASS: Record<BigButtonVariant, string> = {
   primary:
-    "bg-accent border-accent-dark text-white shadow-[0_6px_0_var(--device-accent-dark)] hover:bg-[#c8451f]",
-  ink: "bg-ink border-ink text-screen-ink shadow-[0_6px_0_#000000] hover:bg-[#2b2f33]",
+    "bg-accent border-accent-dark text-white shadow-[0_6px_0_var(--device-accent-dark)] hover:bg-accent-soft",
+  ink: "bg-ink border-ink text-screen-ink shadow-[0_6px_0_var(--device-ink-dark)] hover:bg-ink-soft",
   surface:
-    "bg-surface border-edge text-ink shadow-[0_6px_0_var(--device-edge)] hover:bg-white",
+    "bg-surface border-edge text-ink shadow-[0_6px_0_var(--device-edge-dark)] hover:bg-canvas",
   quiet: "bg-transparent border-transparent text-mute shadow-none",
 };
 

@@ -30,7 +30,7 @@ export function DisplayPanel({
       {isDark && (
         <div
           aria-hidden
-          className="pointer-events-none absolute -top-6 -right-6 h-32 w-32 opacity-25 bg-[radial-gradient(circle,#ffffff33_1px,transparent_1px)] bg-[size:7px_7px]"
+          className="pointer-events-none absolute -top-6 -right-6 h-32 w-32 opacity-25 bg-[radial-gradient(circle,#93c5fd_1px,transparent_1px)] bg-[size:7px_7px]"
         />
       )}
       <div className="relative flex flex-wrap items-end justify-between gap-4">

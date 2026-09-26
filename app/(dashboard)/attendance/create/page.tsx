@@ -275,7 +275,7 @@ function CreateAttendanceForm() {
                   onClick={() => setSession(option)}
                   className={`flex min-h-20 items-center justify-center gap-3 rounded-2xl border-2 px-4 text-xl font-bold uppercase tracking-wide transition-all duration-100 active:translate-y-[4px] active:shadow-none ${
                     isActive
-                      ? "border-ink bg-ink text-screen-ink shadow-[0_6px_0_#000000]"
+                      ? "border-ink bg-ink text-screen-ink shadow-[0_6px_0_var(--device-ink-dark)]"
                       : "border-edge bg-surface text-ink shadow-[0_6px_0_var(--device-edge)]"
                   }`}
                 >

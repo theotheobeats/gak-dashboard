@@ -9,7 +9,7 @@ export function DeviceShell({
 }) {
   return (
     <div
-      className={`mx-auto w-full max-w-3xl rounded-[36px] border-2 border-edge bg-canvas p-3 shadow-[0_30px_60px_-45px_rgba(20,20,20,0.8)] sm:p-5 ${className}`}
+      className={`mx-auto w-full max-w-3xl rounded-[36px] border-2 border-edge bg-canvas p-3 shadow-[0_18px_40px_-32px_rgba(17,24,39,0.45)] sm:p-5 ${className}`}
     >
       {children}
     </div>
@@ -29,7 +29,7 @@ export function StepCard({
 }) {
   return (
     <section
-      className={`rounded-[28px] border-2 border-edge bg-surface/80 p-4 sm:p-5 ${className}`}
+      className={`rounded-[28px] border-2 border-edge bg-surface p-4 sm:p-5 ${className}`}
     >
       <div className="mb-4 flex items-center gap-3">
         {step !== undefined && (
